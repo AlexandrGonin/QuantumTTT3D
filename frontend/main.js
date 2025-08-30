@@ -256,4 +256,4 @@ const app = new QuantumTicTacToe();
 window.createLobby = () => app.createLobby();
 window.joinLobby = () => app.joinLobby();
 window.leaveLobby = () => app.leaveLobby();
-window.showLobbyList = () => app.showLobbyList();
+window.showLobbyList = () => app.showLobbyList(); 
