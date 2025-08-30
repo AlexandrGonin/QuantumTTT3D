@@ -32,6 +32,7 @@ export async function initAuth(initData) {
     }
 }
 
+
 export const api = {
     async createLobby() {
         const response = await fetch(`${API_BASE_URL}/lobby/create`, {
@@ -54,4 +55,4 @@ export const api = {
         });
         return response.json();
     }
-};
+}; 

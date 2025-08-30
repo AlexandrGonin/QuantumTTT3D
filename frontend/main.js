@@ -88,4 +88,4 @@ class QuantumTicTacToe {
     }
 }
 
-window.app = new QuantumTicTacToe();
+window.app = new QuantumTicTacToe(); 
