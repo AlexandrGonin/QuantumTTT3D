@@ -1,16 +1,19 @@
+// frontend/vite.config.js
 import { defineConfig } from 'vite';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 
 export default defineConfig({
   plugins: [
-    basicSsl() // Для HTTPS в development
+    basicSsl() // Генерирует самоподписанный SSL сертификат
   ],
   server: {
     port: 5173,
-    host: true
+    host: true, // Разрешаем доступ с других устройств
+    https: true, // Включаем HTTPS
+    strictPort: true
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: false // Отключаем sourcemap для production
   }
 });

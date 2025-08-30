@@ -4,14 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "build": "echo 'No build needed for Node.js'"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "express": "^5.1.0",
-    "node-telegram-bot-api": "^0.66.0",
+    "node-telegram-bot-api": "^0.63.0",
     "redis": "^5.8.2",
     "ws": "^8.18.3"
   },
