@@ -21,6 +21,12 @@ class QuantumTicTacToe {
             this.user = await initAuth(Telegram.WebApp.initData);
             this.showGameInterface(this.user);
             
+            // Делаем методы доступными глобально
+            window.createLobby = () => this.createLobby();
+            window.joinLobby = () => this.joinLobby();
+            window.leaveLobby = () => this.leaveLobby();
+            window.showLobbyList = () => this.showLobbyList();
+            
         } catch (error) {
             console.error('Initialization error:', error);
             Telegram.WebApp.showPopup({
@@ -38,14 +44,14 @@ class QuantumTicTacToe {
                 ${user.username ? `(@${user.username})` : ''}
             </div>
             <div class="game-controls">
-                <button onclick="app.createLobby()">Create Lobby</button>
-                <button onclick="app.showLobbyList()">Join Lobby</button>
+                <button onclick="createLobby()">Create Lobby</button>
+                <button onclick="showLobbyList()">Join Lobby</button>
             </div>
             ${this.currentLobby ? `
                 <div class="lobby-info">
                     <h3>Lobby: ${this.currentLobby.id}</h3>
                     <p>Players: ${this.currentLobby.players.length}/2</p>
-                    <button onclick="app.leaveLobby()">Leave Lobby</button>
+                    <button onclick="leaveLobby()">Leave Lobby</button>
                 </div>
             ` : ''}
         `;
@@ -60,6 +66,8 @@ class QuantumTicTacToe {
                 message: 'Enter lobby name:',
                 buttons: [{ type: 'default', text: 'Create' }]
             });
+            
+            if (result === undefined) return; // User cancelled
             
             const lobbyName = result || 'Quantum Lobby';
             const response = await api.createLobby(this.user.id, lobbyName);
@@ -101,15 +109,18 @@ class QuantumTicTacToe {
                 text: `${lobby.name} (${lobby.players}/2)`
             }));
             
+            // Добавляем кнопку отмены
+            lobbyButtons.push({ type: 'cancel', text: 'Cancel' });
+            
             const result = await Telegram.WebApp.showPopup({
                 title: 'Join Lobby',
                 message: 'Select a lobby to join:',
                 buttons: lobbyButtons
             });
             
-            if (result) {
+            if (result && result !== 'Cancel') {
                 const selectedLobby = response.lobbies.find(l => 
-                    `${l.name} (${l.players}/2)` === result
+                    `${l.name} (${lobby.players}/2)` === result
                 );
                 
                 if (selectedLobby) {
@@ -238,4 +249,11 @@ class QuantumTicTacToe {
     }
 }
 
-window.app = new QuantumTicTacToe();
+// Создаем глобальный экземпляр
+const app = new QuantumTicTacToe();
+
+// Делаем методы доступными глобально
+window.createLobby = () => app.createLobby();
+window.joinLobby = () => app.joinLobby();
+window.leaveLobby = () => app.leaveLobby();
+window.showLobbyList = () => app.showLobbyList();
