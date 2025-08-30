@@ -20,9 +20,13 @@ class QuantumTicTacToe {
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
             
+            // Сразу скрываем экран аутентификации после загрузки
+            document.getElementById('auth-screen').classList.remove('active');
+            
             this.user = await initAuth(Telegram.WebApp.initData);
             this.showMainMenu();
             
+            // Глобальные функции
             window.createLobby = () => this.showCreateLobby();
             window.joinLobby = () => this.showJoinLobby();
             window.backToMain = () => this.showMainMenu();
@@ -63,7 +67,6 @@ class QuantumTicTacToe {
             </div>
         `;
         
-        document.getElementById('auth-screen').classList.remove('active');
         document.getElementById('game-screen').classList.add('active');
     }
 
@@ -217,19 +220,15 @@ class QuantumTicTacToe {
         if (!this.currentLobby) return;
 
         try {
-            // Создаем ссылку-приглашение
-            const inviteLink = `https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(`Join my Quantum Tic-Tac-Toe game! Lobby: ${this.currentLobby.name} (ID: ${this.currentLobby.id})`)}`;
+            const shareText = `Join my Quantum Tic-Tac-Toe game! 🎮\nLobby: ${this.currentLobby.name}\nCode: ${this.currentLobby.id}`;
             
-            // Открываем Telegram share dialog
-            Telegram.WebApp.openLink(inviteLink);
+            Telegram.WebApp.openLink(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(shareText)}`);
             
         } catch (error) {
             console.error('Share error:', error);
-            
-            // Fallback: показываем код лобби для ручного копирования
             Telegram.WebApp.showPopup({
                 title: 'Invite Friends',
-                message: `Share this lobby code:\n${this.currentLobby.id}\n\nOr send this link to friends!`,
+                message: `Share this lobby code:\n${this.currentLobby.id}`
             });
         }
     }
