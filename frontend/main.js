@@ -5,6 +5,7 @@ class QuantumTicTacToe {
         this.user = null;
         this.socket = null;
         this.currentLobby = null;
+        this.currentView = 'main'; // main, create-lobby, join-lobby, lobby-list
         this.init();
     }
 
@@ -19,13 +20,15 @@ class QuantumTicTacToe {
             Telegram.WebApp.expand();
             
             this.user = await initAuth(Telegram.WebApp.initData);
-            this.showGameInterface(this.user);
+            this.showMainMenu();
             
-            // Делаем методы доступными глобально
-            window.createLobby = () => this.createLobby();
-            window.joinLobby = () => this.joinLobby();
+            window.createLobby = () => this.showCreateLobby();
+            window.joinLobby = () => this.showJoinLobby();
             window.leaveLobby = () => this.leaveLobby();
             window.showLobbyList = () => this.showLobbyList();
+            window.confirmCreateLobby = () => this.confirmCreateLobby();
+            window.confirmJoinLobby = () => this.confirmJoinLobby();
+            window.backToMain = () => this.showMainMenu();
             
         } catch (error) {
             console.error('Initialization error:', error);
@@ -36,104 +39,169 @@ class QuantumTicTacToe {
         }
     }
 
-    showGameInterface(user) {
+    showMainMenu() {
+        this.currentView = 'main';
         const overlay = document.getElementById('ui-overlay');
         overlay.innerHTML = `
-            <div class="user-info">
-                👤 ${user.first_name}${user.last_name ? ' ' + user.last_name : ''}
-                ${user.username ? `(@${user.username})` : ''}
-            </div>
-            <div class="game-controls">
-                <button onclick="createLobby()">Create Lobby</button>
-                <button onclick="showLobbyList()">Join Lobby</button>
-            </div>
-            ${this.currentLobby ? `
-                <div class="lobby-info">
-                    <h3>Lobby: ${this.currentLobby.id}</h3>
-                    <p>Players: ${this.currentLobby.players.length}/2</p>
-                    <button onclick="leaveLobby()">Leave Lobby</button>
+            <div class="center-container">
+                <div class="user-card">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-info">
+                        <div class="user-name">${this.user.first_name}${this.user.last_name ? ' ' + this.user.last_name : ''}</div>
+                        <div class="user-username">${this.user.username ? '@' + this.user.username : ''}</div>
+                    </div>
                 </div>
-            ` : ''}
+
+                <div class="menu-buttons">
+                    <button class="menu-btn primary" onclick="createLobby()">
+                        <span class="btn-icon">➕</span>
+                        Create Lobby
+                    </button>
+                    <button class="menu-btn secondary" onclick="showLobbyList()">
+                        <span class="btn-icon">🔍</span>
+                        Join Lobby
+                    </button>
+                </div>
+            </div>
         `;
-        
-        document.getElementById('game-screen').classList.add('active');
     }
 
-    async createLobby() {
-        try {
-            const result = await Telegram.WebApp.showPopup({
-                title: 'Create Lobby',
-                message: 'Enter lobby name:',
-                buttons: [{ type: 'default', text: 'Create' }]
-            });
-            
-            if (result === undefined) return; // User cancelled
-            
-            const lobbyName = result || 'Quantum Lobby';
-            const response = await api.createLobby(this.user.id, lobbyName);
-            
-            if (response.success) {
-                this.currentLobby = response.lobby;
-                this.setupWebSocket();
-                
-                Telegram.WebApp.showPopup({
-                    title: 'Lobby Created',
-                    message: `ID: ${response.lobbyId}\nShare this ID with friends!`
-                });
-                
-                this.showGameInterface(this.user);
-            }
-            
-        } catch (error) {
-            Telegram.WebApp.showPopup({
-                title: 'Error',
-                message: 'Failed to create lobby: ' + error.message
-            });
-        }
+    showCreateLobby() {
+        this.currentView = 'create-lobby';
+        const overlay = document.getElementById('ui-overlay');
+        overlay.innerHTML = `
+            <div class="center-container">
+                <div class="form-card">
+                    <h2 class="form-title">Create Lobby</h2>
+                    
+                    <div class="input-group">
+                        <label for="lobbyName">Lobby Name</label>
+                        <input type="text" id="lobbyName" placeholder="Enter lobby name" value="Quantum Game" class="text-input">
+                    </div>
+
+                    <div class="form-buttons">
+                        <button class="btn secondary" onclick="backToMain()">
+                            <span class="btn-icon">←</span>
+                            Back
+                        </button>
+                        <button class="btn primary" onclick="confirmCreateLobby()">
+                            <span class="btn-icon">🎮</span>
+                            Create
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    showJoinLobby() {
+        this.currentView = 'join-lobby';
+        const overlay = document.getElementById('ui-overlay');
+        overlay.innerHTML = `
+            <div class="center-container">
+                <div class="form-card">
+                    <h2 class="form-title">Join Lobby</h2>
+                    
+                    <div class="input-group">
+                        <label for="lobbyCode">Lobby Code</label>
+                        <input type="text" id="lobbyCode" placeholder="Enter lobby code" class="text-input">
+                    </div>
+
+                    <div class="form-buttons">
+                        <button class="btn secondary" onclick="backToMain()">
+                            <span class="btn-icon">←</span>
+                            Back
+                        </button>
+                        <button class="btn primary" onclick="confirmJoinLobby()">
+                            <span class="btn-icon">🚪</span>
+                            Join
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     async showLobbyList() {
         try {
             const response = await api.getLobbies();
             
-            if (response.lobbies.length === 0) {
-                Telegram.WebApp.showPopup({
-                    title: 'No Lobbies',
-                    message: 'No available lobbies. Create one first!'
-                });
+            if (!response.lobbies || response.lobbies.length === 0) {
+                this.showJoinLobby();
                 return;
             }
+
+            this.currentView = 'lobby-list';
+            const overlay = document.getElementById('ui-overlay');
             
-            const lobbyButtons = response.lobbies.map(lobby => ({
-                type: 'default',
-                text: `${lobby.name} (${lobby.players}/2)`
-            }));
+            const lobbiesHtml = response.lobbies.map(lobby => `
+                <div class="lobby-item" onclick="app.joinLobby('${lobby.id}')">
+                    <div class="lobby-info">
+                        <div class="lobby-name">${lobby.name}</div>
+                        <div class="lobby-players">${lobby.players || 0}/2 players</div>
+                    </div>
+                    <div class="lobby-join">→</div>
+                </div>
+            `).join('');
+
+            overlay.innerHTML = `
+                <div class="center-container">
+                    <div class="list-card">
+                        <h2 class="form-title">Available Lobbies</h2>
+                        
+                        <div class="lobby-list">
+                            ${lobbiesHtml}
+                        </div>
+
+                        <div class="form-buttons">
+                            <button class="btn secondary" onclick="backToMain()">
+                                <span class="btn-icon">←</span>
+                                Back
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
             
-            // Добавляем кнопку отмены
-            lobbyButtons.push({ type: 'cancel', text: 'Cancel' });
+        } catch (error) {
+            console.error('Lobby list error:', error);
+            this.showJoinLobby();
+        }
+    }
+
+    async confirmCreateLobby() {
+        const lobbyNameInput = document.getElementById('lobbyName');
+        const lobbyName = lobbyNameInput ? lobbyNameInput.value.trim() : 'Quantum Lobby';
+        
+        if (!lobbyName) {
+            this.showError('Please enter lobby name');
+            return;
+        }
+
+        try {
+            const response = await api.createLobby(this.user.id, lobbyName);
             
-            const result = await Telegram.WebApp.showPopup({
-                title: 'Join Lobby',
-                message: 'Select a lobby to join:',
-                buttons: lobbyButtons
-            });
-            
-            if (result && result !== 'Cancel') {
-                const selectedLobby = response.lobbies.find(l => 
-                    `${l.name} (${lobby.players}/2)` === result
-                );
-                
-                if (selectedLobby) {
-                    await this.joinLobby(selectedLobby.id);
-                }
+            if (response.success) {
+                this.currentLobby = response.lobby;
+                this.showLobbyView();
             }
             
         } catch (error) {
-            Telegram.WebApp.showPopup({
-                title: 'Error',
-                message: 'Failed to get lobbies: ' + error.message
-            });
+            console.error('Create lobby error:', error);
+            this.showError('Failed to create lobby: ' + error.message);
         }
+    }
+
+    async confirmJoinLobby() {
+        const lobbyCodeInput = document.getElementById('lobbyCode');
+        const lobbyCode = lobbyCodeInput ? lobbyCodeInput.value.trim() : '';
+        
+        if (!lobbyCode) {
+            this.showError('Please enter lobby code');
+            return;
+        }
+
+        await this.joinLobby(lobbyCode);
     }
 
     async joinLobby(lobbyId) {
@@ -142,22 +210,48 @@ class QuantumTicTacToe {
             
             if (response.success) {
                 this.currentLobby = response.lobby;
-                this.setupWebSocket();
-                
-                Telegram.WebApp.showPopup({
-                    title: 'Joined Lobby',
-                    message: `Lobby: ${response.lobby.name}`
-                });
-                
-                this.showGameInterface(this.user);
+                this.showLobbyView();
             }
             
         } catch (error) {
-            Telegram.WebApp.showPopup({
-                title: 'Error',
-                message: 'Failed to join lobby: ' + error.message
-            });
+            console.error('Join lobby error:', error);
+            this.showError('Failed to join lobby: ' + error.message);
         }
+    }
+
+    showLobbyView() {
+        const overlay = document.getElementById('ui-overlay');
+        overlay.innerHTML = `
+            <div class="center-container">
+                <div class="lobby-card">
+                    <h2 class="lobby-title">${this.currentLobby.name}</h2>
+                    <div class="lobby-id">ID: ${this.currentLobby.id}</div>
+                    
+                    <div class="players-list">
+                        <h3>Players (${this.currentLobby.players.length}/2)</h3>
+                        ${this.currentLobby.players.map(player => `
+                            <div class="player-item ${player.id === this.user.id ? 'current-player' : ''}">
+                                <span class="player-avatar">👤</span>
+                                <span class="player-name">${player.first_name}</span>
+                                ${player.id === this.currentLobby.creator ? '<span class="player-badge">Host</span>' : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="lobby-status">
+                        ${this.currentLobby.players.length === 2 ? 
+                            '✅ Ready to start' : 
+                            '⏳ Waiting for players...'
+                        }
+                    </div>
+
+                    <button class="btn danger" onclick="leaveLobby()">
+                        <span class="btn-icon">🚪</span>
+                        Leave Lobby
+                    </button>
+                </div>
+            </div>
+        `;
     }
 
     async leaveLobby() {
@@ -172,88 +266,20 @@ class QuantumTicTacToe {
                 this.socket = null;
             }
             
-            Telegram.WebApp.showPopup({
-                title: 'Left Lobby',
-                message: 'You left the lobby'
-            });
-            
-            this.showGameInterface(this.user);
+            this.showMainMenu();
             
         } catch (error) {
-            Telegram.WebApp.showPopup({
-                title: 'Error',
-                message: 'Failed to leave lobby: ' + error.message
-            });
+            console.error('Leave lobby error:', error);
+            this.showError('Failed to leave lobby');
         }
-    }
-
-    setupWebSocket() {
-        if (!this.currentLobby) return;
-        
-        this.socket = createWebSocketConnection();
-        
-        this.socket.onopen = () => {
-            console.log('WebSocket connected');
-            this.socket.send(JSON.stringify({
-                type: 'join_lobby',
-                lobbyId: this.currentLobby.id,
-                userId: this.user.id
-            }));
-        };
-        
-        this.socket.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                this.handleWebSocketMessage(message);
-            } catch (error) {
-                console.error('WebSocket message error:', error);
-            }
-        };
-        
-        this.socket.onclose = () => {
-            console.log('WebSocket disconnected');
-        };
-    }
-
-    handleWebSocketMessage(message) {
-        switch (message.type) {
-            case 'player_joined':
-                this.currentLobby = message.lobby;
-                this.showGameInterface(this.user);
-                break;
-                
-            case 'player_left':
-                this.currentLobby = message.lobby;
-                this.showGameInterface(this.user);
-                break;
-                
-            case 'game_start':
-                this.startGame(message.gameState);
-                break;
-        }
-    }
-
-    startGame(gameState) {
-        console.log('Game starting:', gameState);
-        // Здесь будет запуск 3D игры
     }
 
     showError(message) {
-        const appDiv = document.getElementById('app');
-        appDiv.innerHTML = `
-            <div style="padding: 20px; text-align: center;">
-                <h2>❌ Error</h2>
-                <p>${message}</p>
-            </div>
-        `;
+        Telegram.WebApp.showPopup({
+            title: 'Error',
+            message: message
+        });
     }
 }
 
-// Создаем глобальный экземпляр
-const app = new QuantumTicTacToe();
-
-// Делаем методы доступными глобально
-window.createLobby = () => app.createLobby();
-window.joinLobby = () => app.joinLobby();
-window.leaveLobby = () => app.leaveLobby();
-window.showLobbyList = () => app.showLobbyList(); 
+window.app = new QuantumTicTacToe();

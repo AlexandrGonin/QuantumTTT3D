@@ -70,16 +70,6 @@ export const api = {
         return response.json();
     },
 
-    async getLobby(lobbyId) {
-        const response = await fetch(`${API_BASE_URL}/lobby/${lobbyId}`);
-        
-        if (!response.ok) {
-            throw new Error(`Failed to get lobby: ${response.status}`);
-        }
-        
-        return response.json();
-    },
-
     async leaveLobby(userId, lobbyId) {
         const response = await fetch(`${API_BASE_URL}/lobby/${lobbyId}/leave`, {
             method: 'POST',
