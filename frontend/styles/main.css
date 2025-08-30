@@ -105,6 +105,25 @@ button:hover {
     transform: translateY(-2px);
 }
 
+.game-controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.game-controls button {
+  background: rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.game-controls button:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
 /* Error states */
 .error {
     color: #ff6b6b;

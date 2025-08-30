@@ -88,25 +88,22 @@ class QuantumTicTacToe {
         this.setTelegramTheme();
     }
 
-    showGameInterface(user) {
-        const overlay = document.getElementById('ui-overlay');
-        overlay.innerHTML = `
-            <div class="user-info">
-                👤 ${user.first_name}${user.username ? ` (@${user.username})` : ''}
-            </div>
-            <div class="game-controls">
-                <button onclick="app.createLobby()">Create Lobby</button>
-                <button onclick="app.joinLobby()">Join Lobby</button>
-            </div>
-        `;
-        
-        // Показываем игровой экран
-        document.getElementById('game-screen').classList.add('active');
-        this.currentScreen = 'game';
-        
-        // Здесь будет инициализация Three.js сцены
-        this.initGameScene();
-    }
+
+showGameInterface(user) {
+  const overlay = document.getElementById('ui-overlay');
+  overlay.innerHTML = `
+    <div class="user-info">
+      👤 ${user.first_name}${user.last_name ? ' ' + user.last_name : ''}
+      ${user.username ? `(@${user.username})` : ''}
+    </div>
+    <div class="game-controls">
+      <button onclick="app.createLobby()">Create Lobby</button>
+      <button onclick="app.joinLobby()">Join Lobby</button>
+    </div>
+  `;
+  
+  document.getElementById('game-screen').classList.add('active');
+}
 
     setTelegramTheme() {
         // Устанавливаем тему в соответствии с настройками Telegram
@@ -133,21 +130,63 @@ class QuantumTicTacToe {
     }
 
     // Методы для работы с лобби (заглушки)
-    createLobby() {
-        console.log('Creating lobby...');
-        Telegram.WebApp.showPopup({
-            title: 'Create Lobby',
-            message: 'Lobby creation will be implemented soon!'
-        });
+// Методы для работы с лобби
+async createLobby() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/lobby/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      Telegram.WebApp.showPopup({
+        title: 'Lobby Created',
+        message: `Lobby ID: ${data.lobbyId}`
+      });
     }
+    
+  } catch (error) {
+    Telegram.WebApp.showPopup({
+      title: 'Error',
+      message: 'Failed to create lobby'
+    });
+  }
+}
 
-    joinLobby() {
-        console.log('Joining lobby...');
+async joinLobby() {
+  try {
+    const result = await Telegram.WebApp.showPopup({
+      title: 'Join Lobby',
+      message: 'Enter Lobby ID:',
+      buttons: [{ type: 'default', text: 'Join' }]
+    });
+    
+    if (result) {
+      const response = await fetch(`${API_BASE_URL}/lobby/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lobbyId: result })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
         Telegram.WebApp.showPopup({
-            title: 'Join Lobby',
-            message: 'Lobby joining will be implemented soon!'
+          title: 'Success',
+          message: `Joined lobby: ${data.lobbyId}`
         });
+      }
     }
+    
+  } catch (error) {
+    Telegram.WebApp.showPopup({
+      title: 'Error',
+      message: 'Failed to join lobby'
+    });
+  }
+}
 }
 
 // Делаем глобальным для доступа из HTML
