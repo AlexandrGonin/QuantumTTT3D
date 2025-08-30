@@ -5,7 +5,7 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false
   },
-  server: {
-    port: 5173
+  define: {
+    'process.env': {}
   }
 });
