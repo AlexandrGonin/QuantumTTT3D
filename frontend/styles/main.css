@@ -1,135 +1,56 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    overflow: hidden;
-}
-
-#app {
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Auth Screen Styles */
-.auth-screen {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-}
-
-.auth-container {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    padding: 2rem;
-    border-radius: 20px;
-    text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.auth-container h2 {
-    margin-bottom: 1rem;
-    font-size: 1.8rem;
-}
-
-.loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    border-top: 4px solid white;
-    border-radius: 50%;
-    margin: 1rem auto;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.auth-status {
-    margin-top: 1rem;
-    opacity: 0.8;
-}
-
-/* Game Canvas */
-#game-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-}
-
-/* UI Overlay */
-#ui-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    padding: 1rem;
-    pointer-events: none;
-    z-index: 100;
-}
-
-.user-info {
-    background: rgba(0, 0, 0, 0.5);
-    padding: 0.5rem 1rem;
+.lobby-info {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 15px;
     border-radius: 10px;
-    margin-bottom: 1rem;
+    margin-top: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
-/* Buttons */
-button {
+.lobby-info h3 {
+    margin: 0 0 10px 0;
+    color: #fff;
+    font-size: 18px;
+}
+
+.lobby-info p {
+    margin: 5px 0;
+    color: #ccc;
+}
+
+.lobby-info button {
+    background: rgba(255, 100, 100, 0.3);
+    border: 2px solid rgba(255, 100, 100, 0.5);
+    margin-top: 10px;
+}
+
+.lobby-info button:hover {
+    background: rgba(255, 100, 100, 0.4);
+}
+
+.game-controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.game-controls button {
     background: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    padding: 0.8rem 1.5rem;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 12px 20px;
+    font-size: 16px;
+    min-width: 140px;
 }
 
-button:hover {
+.game-controls button:hover {
     background: rgba(255, 255, 255, 0.3);
     transform: translateY(-2px);
 }
 
-.game-controls {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.game-controls button {
-  background: rgba(255, 255, 255, 0.3);
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  padding: 12px 20px;
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.game-controls button:hover {
-  background: rgba(255, 255, 255, 0.4);
-  transform: translateY(-2px);
-}
-
-
-/* Error states */
-.error {
-    color: #ff6b6b;
-    background: rgba(255, 107, 107, 0.1);
-    padding: 1rem;
-    border-radius: 10px;
-    margin: 1rem 0;
+.user-info {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-weight: bold;
 }

@@ -1,10 +1,10 @@
-import { initAuth } from './src/utils/api.js';
+import { initAuth, api, createWebSocketConnection } from './src/utils/api.js';
 
 class QuantumTicTacToe {
     constructor() {
         this.user = null;
         this.socket = null;
-        this.currentScreen = null;
+        this.currentLobby = null;
         this.init();
     }
 
@@ -18,11 +18,7 @@ class QuantumTicTacToe {
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
             
-            console.log('Telegram WebApp initialized');
-            
             this.user = await initAuth(Telegram.WebApp.initData);
-            console.log('User authenticated:', this.user);
-            
             this.showGameInterface(this.user);
             
         } catch (error) {
@@ -43,8 +39,15 @@ class QuantumTicTacToe {
             </div>
             <div class="game-controls">
                 <button onclick="app.createLobby()">Create Lobby</button>
-                <button onclick="app.joinLobby()">Join Lobby</button>
+                <button onclick="app.showLobbyList()">Join Lobby</button>
             </div>
+            ${this.currentLobby ? `
+                <div class="lobby-info">
+                    <h3>Lobby: ${this.currentLobby.id}</h3>
+                    <p>Players: ${this.currentLobby.players.length}/2</p>
+                    <button onclick="app.leaveLobby()">Leave Lobby</button>
+                </div>
+            ` : ''}
         `;
         
         document.getElementById('game-screen').classList.add('active');
@@ -52,29 +55,176 @@ class QuantumTicTacToe {
 
     async createLobby() {
         try {
-            const response = await fetch('https://quantumttt3d-backend.onrender.com/lobby/create', {
-                method: 'POST'
+            const result = await Telegram.WebApp.showPopup({
+                title: 'Create Lobby',
+                message: 'Enter lobby name:',
+                buttons: [{ type: 'default', text: 'Create' }]
             });
-            const data = await response.json();
             
-            Telegram.WebApp.showPopup({
-                title: 'Lobby Created',
-                message: `ID: ${data.lobbyId}`
-            });
+            const lobbyName = result || 'Quantum Lobby';
+            const response = await api.createLobby(this.user.id, lobbyName);
+            
+            if (response.success) {
+                this.currentLobby = response.lobby;
+                this.setupWebSocket();
+                
+                Telegram.WebApp.showPopup({
+                    title: 'Lobby Created',
+                    message: `ID: ${response.lobbyId}\nShare this ID with friends!`
+                });
+                
+                this.showGameInterface(this.user);
+            }
             
         } catch (error) {
             Telegram.WebApp.showPopup({
                 title: 'Error',
-                message: 'Failed to create lobby'
+                message: 'Failed to create lobby: ' + error.message
             });
         }
     }
 
-    async joinLobby() {
-        Telegram.WebApp.showPopup({
-            title: 'Join Lobby',
-            message: 'This feature will be available soon!'
-        });
+    async showLobbyList() {
+        try {
+            const response = await api.getLobbies();
+            
+            if (response.lobbies.length === 0) {
+                Telegram.WebApp.showPopup({
+                    title: 'No Lobbies',
+                    message: 'No available lobbies. Create one first!'
+                });
+                return;
+            }
+            
+            const lobbyButtons = response.lobbies.map(lobby => ({
+                type: 'default',
+                text: `${lobby.name} (${lobby.players}/2)`
+            }));
+            
+            const result = await Telegram.WebApp.showPopup({
+                title: 'Join Lobby',
+                message: 'Select a lobby to join:',
+                buttons: lobbyButtons
+            });
+            
+            if (result) {
+                const selectedLobby = response.lobbies.find(l => 
+                    `${l.name} (${l.players}/2)` === result
+                );
+                
+                if (selectedLobby) {
+                    await this.joinLobby(selectedLobby.id);
+                }
+            }
+            
+        } catch (error) {
+            Telegram.WebApp.showPopup({
+                title: 'Error',
+                message: 'Failed to get lobbies: ' + error.message
+            });
+        }
+    }
+
+    async joinLobby(lobbyId) {
+        try {
+            const response = await api.joinLobby(this.user.id, lobbyId);
+            
+            if (response.success) {
+                this.currentLobby = response.lobby;
+                this.setupWebSocket();
+                
+                Telegram.WebApp.showPopup({
+                    title: 'Joined Lobby',
+                    message: `Lobby: ${response.lobby.name}`
+                });
+                
+                this.showGameInterface(this.user);
+            }
+            
+        } catch (error) {
+            Telegram.WebApp.showPopup({
+                title: 'Error',
+                message: 'Failed to join lobby: ' + error.message
+            });
+        }
+    }
+
+    async leaveLobby() {
+        try {
+            if (!this.currentLobby) return;
+            
+            await api.leaveLobby(this.user.id, this.currentLobby.id);
+            this.currentLobby = null;
+            
+            if (this.socket) {
+                this.socket.close();
+                this.socket = null;
+            }
+            
+            Telegram.WebApp.showPopup({
+                title: 'Left Lobby',
+                message: 'You left the lobby'
+            });
+            
+            this.showGameInterface(this.user);
+            
+        } catch (error) {
+            Telegram.WebApp.showPopup({
+                title: 'Error',
+                message: 'Failed to leave lobby: ' + error.message
+            });
+        }
+    }
+
+    setupWebSocket() {
+        if (!this.currentLobby) return;
+        
+        this.socket = createWebSocketConnection();
+        
+        this.socket.onopen = () => {
+            console.log('WebSocket connected');
+            this.socket.send(JSON.stringify({
+                type: 'join_lobby',
+                lobbyId: this.currentLobby.id,
+                userId: this.user.id
+            }));
+        };
+        
+        this.socket.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                this.handleWebSocketMessage(message);
+            } catch (error) {
+                console.error('WebSocket message error:', error);
+            }
+        };
+        
+        this.socket.onclose = () => {
+            console.log('WebSocket disconnected');
+        };
+    }
+
+    handleWebSocketMessage(message) {
+        switch (message.type) {
+            case 'player_joined':
+                this.currentLobby = message.lobby;
+                this.showGameInterface(this.user);
+                break;
+                
+            case 'player_left':
+                this.currentLobby = message.lobby;
+                this.showGameInterface(this.user);
+                break;
+                
+            case 'game_start':
+                this.startGame(message.gameState);
+                break;
+        }
+    }
+
+    startGame(gameState) {
+        console.log('Game starting:', gameState);
+        // Здесь будет запуск 3D игры
     }
 
     showError(message) {
@@ -88,4 +238,4 @@ class QuantumTicTacToe {
     }
 }
 
-window.app = new QuantumTicTacToe(); 
+window.app = new QuantumTicTacToe();

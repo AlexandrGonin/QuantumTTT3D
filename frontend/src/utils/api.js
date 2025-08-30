@@ -26,3 +26,77 @@ export async function initAuth(initData) {
         throw new Error('Authentication failed: ' + error.message);
     }
 }
+
+export const api = {
+    async createLobby(userId, lobbyName = 'Quantum Lobby') {
+        const response = await fetch(`${API_BASE_URL}/lobby/create`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({ userId, lobbyName })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to create lobby: ${response.status}`);
+        }
+        
+        return response.json();
+    },
+
+    async joinLobby(userId, lobbyId) {
+        const response = await fetch(`${API_BASE_URL}/lobby/join`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({ userId, lobbyId })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to join lobby: ${response.status}`);
+        }
+        
+        return response.json();
+    },
+
+    async getLobbies() {
+        const response = await fetch(`${API_BASE_URL}/lobby/list`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to get lobbies: ${response.status}`);
+        }
+        
+        return response.json();
+    },
+
+    async getLobby(lobbyId) {
+        const response = await fetch(`${API_BASE_URL}/lobby/${lobbyId}`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to get lobby: ${response.status}`);
+        }
+        
+        return response.json();
+    },
+
+    async leaveLobby(userId, lobbyId) {
+        const response = await fetch(`${API_BASE_URL}/lobby/${lobbyId}/leave`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({ userId })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to leave lobby: ${response.status}`);
+        }
+        
+        return response.json();
+    }
+};
+
+export function createWebSocketConnection() {
+    return new WebSocket('wss://quantumttt3d-backend.onrender.com');
+}
