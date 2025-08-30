@@ -1,16 +1,16 @@
-import { initAuth, api, createWebSocketConnection } from './src/utils/api.js';
+import { initAuth } from './src/utils/api.js';
 
 class QuantumTicTacToe {
     constructor() {
         this.user = null;
-        this.socket = null;
-        this.currentLobby = null;
-        this.currentView = 'main'; // main, create-lobby, join-lobby, lobby-list
+        this.currentView = 'main';
         this.init();
     }
 
     async init() {
         try {
+            console.log('Initializing app...');
+            
             if (!window.Telegram || !Telegram.WebApp) {
                 this.showError('Please open in Telegram');
                 return;
@@ -19,23 +19,23 @@ class QuantumTicTacToe {
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
             
+            console.log('Telegram WebApp initialized');
+            
             this.user = await initAuth(Telegram.WebApp.initData);
+            console.log('User authenticated:', this.user);
+            
             this.showMainMenu();
             
+            // Make methods globally available
             window.createLobby = () => this.showCreateLobby();
             window.joinLobby = () => this.showJoinLobby();
-            window.leaveLobby = () => this.leaveLobby();
-            window.showLobbyList = () => this.showLobbyList();
+            window.backToMain = () => this.showMainMenu();
             window.confirmCreateLobby = () => this.confirmCreateLobby();
             window.confirmJoinLobby = () => this.confirmJoinLobby();
-            window.backToMain = () => this.showMainMenu();
             
         } catch (error) {
             console.error('Initialization error:', error);
-            Telegram.WebApp.showPopup({
-                title: 'Error',
-                message: 'Failed to authenticate. Please try again.',
-            });
+            this.showError('Failed to initialize: ' + error.message);
         }
     }
 
@@ -57,13 +57,16 @@ class QuantumTicTacToe {
                         <span class="btn-icon">➕</span>
                         Create Lobby
                     </button>
-                    <button class="menu-btn secondary" onclick="showLobbyList()">
+                    <button class="menu-btn secondary" onclick="joinLobby()">
                         <span class="btn-icon">🔍</span>
                         Join Lobby
                     </button>
                 </div>
             </div>
         `;
+        
+        document.getElementById('auth-screen').classList.remove('active');
+        document.getElementById('game-screen').classList.add('active');
     }
 
     showCreateLobby() {
@@ -122,53 +125,6 @@ class QuantumTicTacToe {
         `;
     }
 
-    async showLobbyList() {
-        try {
-            const response = await api.getLobbies();
-            
-            if (!response.lobbies || response.lobbies.length === 0) {
-                this.showJoinLobby();
-                return;
-            }
-
-            this.currentView = 'lobby-list';
-            const overlay = document.getElementById('ui-overlay');
-            
-            const lobbiesHtml = response.lobbies.map(lobby => `
-                <div class="lobby-item" onclick="app.joinLobby('${lobby.id}')">
-                    <div class="lobby-info">
-                        <div class="lobby-name">${lobby.name}</div>
-                        <div class="lobby-players">${lobby.players || 0}/2 players</div>
-                    </div>
-                    <div class="lobby-join">→</div>
-                </div>
-            `).join('');
-
-            overlay.innerHTML = `
-                <div class="center-container">
-                    <div class="list-card">
-                        <h2 class="form-title">Available Lobbies</h2>
-                        
-                        <div class="lobby-list">
-                            ${lobbiesHtml}
-                        </div>
-
-                        <div class="form-buttons">
-                            <button class="btn secondary" onclick="backToMain()">
-                                <span class="btn-icon">←</span>
-                                Back
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-        } catch (error) {
-            console.error('Lobby list error:', error);
-            this.showJoinLobby();
-        }
-    }
-
     async confirmCreateLobby() {
         const lobbyNameInput = document.getElementById('lobbyName');
         const lobbyName = lobbyNameInput ? lobbyNameInput.value.trim() : 'Quantum Lobby';
@@ -179,16 +135,19 @@ class QuantumTicTacToe {
         }
 
         try {
-            const response = await api.createLobby(this.user.id, lobbyName);
+            // Здесь будет вызов API для создания лобби
+            console.log('Creating lobby:', lobbyName);
             
-            if (response.success) {
-                this.currentLobby = response.lobby;
-                this.showLobbyView();
-            }
+            Telegram.WebApp.showPopup({
+                title: 'Lobby Created',
+                message: `Lobby "${lobbyName}" created successfully!`
+            });
+            
+            this.showMainMenu();
             
         } catch (error) {
             console.error('Create lobby error:', error);
-            this.showError('Failed to create lobby: ' + error.message);
+            this.showError('Failed to create lobby');
         }
     }
 
@@ -201,76 +160,20 @@ class QuantumTicTacToe {
             return;
         }
 
-        await this.joinLobby(lobbyCode);
-    }
-
-    async joinLobby(lobbyId) {
         try {
-            const response = await api.joinLobby(this.user.id, lobbyId);
+            // Здесь будет вызов API для присоединения к лобби
+            console.log('Joining lobby:', lobbyCode);
             
-            if (response.success) {
-                this.currentLobby = response.lobby;
-                this.showLobbyView();
-            }
-            
-        } catch (error) {
-            console.error('Join lobby error:', error);
-            this.showError('Failed to join lobby: ' + error.message);
-        }
-    }
-
-    showLobbyView() {
-        const overlay = document.getElementById('ui-overlay');
-        overlay.innerHTML = `
-            <div class="center-container">
-                <div class="lobby-card">
-                    <h2 class="lobby-title">${this.currentLobby.name}</h2>
-                    <div class="lobby-id">ID: ${this.currentLobby.id}</div>
-                    
-                    <div class="players-list">
-                        <h3>Players (${this.currentLobby.players.length}/2)</h3>
-                        ${this.currentLobby.players.map(player => `
-                            <div class="player-item ${player.id === this.user.id ? 'current-player' : ''}">
-                                <span class="player-avatar">👤</span>
-                                <span class="player-name">${player.first_name}</span>
-                                ${player.id === this.currentLobby.creator ? '<span class="player-badge">Host</span>' : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-
-                    <div class="lobby-status">
-                        ${this.currentLobby.players.length === 2 ? 
-                            '✅ Ready to start' : 
-                            '⏳ Waiting for players...'
-                        }
-                    </div>
-
-                    <button class="btn danger" onclick="leaveLobby()">
-                        <span class="btn-icon">🚪</span>
-                        Leave Lobby
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-
-    async leaveLobby() {
-        try {
-            if (!this.currentLobby) return;
-            
-            await api.leaveLobby(this.user.id, this.currentLobby.id);
-            this.currentLobby = null;
-            
-            if (this.socket) {
-                this.socket.close();
-                this.socket = null;
-            }
+            Telegram.WebApp.showPopup({
+                title: 'Joined Lobby',
+                message: `Joined lobby: ${lobbyCode}`
+            });
             
             this.showMainMenu();
             
         } catch (error) {
-            console.error('Leave lobby error:', error);
-            this.showError('Failed to leave lobby');
+            console.error('Join lobby error:', error);
+            this.showError('Failed to join lobby');
         }
     }
 
@@ -282,4 +185,5 @@ class QuantumTicTacToe {
     }
 }
 
-window.app = new QuantumTicTacToe();
+// Initialize the app
+const app = new QuantumTicTacToe();

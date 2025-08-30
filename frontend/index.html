@@ -6,32 +6,24 @@
     <title>Quantum 3D Tic-Tac-Toe</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="/styles/main.css">
-    <style>
-        /* Скрываем всё по умолчанию */
-        .screen {
-            display: none;
-        }
-        
-        .screen.active {
-            display: flex;
-        }
-    </style>
 </head>
 <body>
     <div id="app">
-        <!-- Экран аутентификации -->
-        <div id="auth-screen" class="screen"></div>
+        <div id="auth-screen" class="screen active">
+            <div class="center-container">
+                <div class="auth-container">
+                    <h2>🎮 Quantum 3D Tic-Tac-Toe</h2>
+                    <p>Authenticating...</p>
+                </div>
+            </div>
+        </div>
         
-        <!-- Экран лобби -->
-        <div id="lobby-screen" class="screen"></div>
-        
-        <!-- Экран игры -->
         <div id="game-screen" class="screen">
             <canvas id="game-canvas"></canvas>
             <div id="ui-overlay"></div>
         </div>
     </div>
-    
+
     <script type="module" src="/main.js"></script>
 </body>
 </html>
