@@ -1,0 +1,21 @@
+# Билды
+dist/
+build/
+
+# Зависимости
+node_modules/
+
+# Кэши
+.cache/
+.temp/
+
+# Логи
+*.log
+
+# Переменные окружения
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
