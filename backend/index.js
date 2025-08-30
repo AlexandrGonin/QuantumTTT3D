@@ -13,16 +13,21 @@ app.use(express.static('public'));
 app.use('/auth', require('./src/controllers/authController'));
 app.use('/lobby', require('./src/middleware/auth'), require('./src/controllers/lobbyController'));
 
-// Простая настройка для разработки
+const allowedOrigins = [
+  'https://quantumttt3d-frontend.vercel.app/', // Замените на ваш Vercel URL
+  'https://localhost:5173',
+  'https://127.0.0.1:5173',
+  'http://localhost:5173', 
+  'http://127.0.0.1:5173'
+];
+
 app.use(cors({
   origin: function (origin, callback) {
-    // Разрешаем все локальные запросы и Railway домены
-    if (!origin || 
-        origin.includes('localhost') || 
-        origin.includes('127.0.0.1') ||
-        origin.includes('railway.app') ||
-        origin.includes('vercel.app') ||
-        origin.includes('netlify.app')) {
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin) || 
+        origin.includes('.vercel.app') || 
+        origin.includes('.onrender.com')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -30,7 +35,6 @@ app.use(cors({
   },
   credentials: true
 }));
-
 // HTTP server
 const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
