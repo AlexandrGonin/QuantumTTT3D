@@ -13,6 +13,24 @@ app.use(express.static('public'));
 app.use('/auth', require('./src/controllers/authController'));
 app.use('/lobby', require('./src/middleware/auth'), require('./src/controllers/lobbyController'));
 
+// Простая настройка для разработки
+app.use(cors({
+  origin: function (origin, callback) {
+    // Разрешаем все локальные запросы и Railway домены
+    if (!origin || 
+        origin.includes('localhost') || 
+        origin.includes('127.0.0.1') ||
+        origin.includes('railway.app') ||
+        origin.includes('vercel.app') ||
+        origin.includes('netlify.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 // HTTP server
 const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
