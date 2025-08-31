@@ -7,7 +7,10 @@ class QuantumTicTacToe {
         this.currentLobby = null;
         this.currentView = 'auth';
         this.game = null;
-        this.selectedLayer = 1; // 1, 2, или 3
+        this.selectedLayer = 1;
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 5;
+        this.heartbeatInterval = null;
         this.init();
     }
 
@@ -191,8 +194,6 @@ class QuantumTicTacToe {
                 this.currentLobby = response.lobby;
                 this.setupWebSocket();
                 this.showLobbyView();
-                
-                // УБРАЛ ВСПЛЫВАЮЩЕЕ СООБЩЕНИЕ О СОЗДАНИИ ЛОББИ
             }
             
         } catch (error) {
@@ -384,7 +385,6 @@ class QuantumTicTacToe {
                 y: clientY - previousMousePosition.y
             };
 
-            // ВРАЩЕНИЕ ТОЛЬКО ПРИ ПЕРЕТАСКИВАНИИ - БЕЗ АВТОМАТИЧЕСКОГО ВРАЩЕНИЯ
             scene.rotation.y += deltaMove.x * 0.01;
             scene.rotation.x += deltaMove.y * 0.01;
 
@@ -414,7 +414,6 @@ class QuantumTicTacToe {
 
         const animate = () => {
             requestAnimationFrame(animate);
-            // УБРАЛ АВТОМАТИЧЕСКОЕ ВРАЩЕНИЕ
             renderer.render(scene, camera);
         };
 
@@ -468,14 +467,12 @@ class QuantumTicTacToe {
         const currentPlayer = this.currentLobby.gameState.players.find(p => p.id === this.user.id);
         if (!currentPlayer) return;
         
-        // Проверяем, чей сейчас ход
         const currentPlayerIndex = this.currentLobby.gameState.players.findIndex(p => p.id === this.currentLobby.gameState.currentPlayer);
         if (this.user.id !== this.currentLobby.gameState.currentPlayer) {
             this.showError("Not your turn!");
             return;
         }
 
-        // Отправляем ход на сервер
         if (this.socket) {
             this.socket.send(JSON.stringify({
                 type: 'game_move',
@@ -503,8 +500,13 @@ class QuantumTicTacToe {
     }
 
     cleanupGame() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+
         if (this.socket) {
-            this.socket.close();
+            this.socket.close(1000, 'User left game');
             this.socket = null;
         }
 
@@ -546,19 +548,25 @@ class QuantumTicTacToe {
             this.socket = createWebSocketConnection();
             
             this.socket.onopen = () => {
+                console.log('WebSocket connection established');
+                this.reconnectAttempts = 0;
+                this.startHeartbeat();
+                
                 this.socket.send(JSON.stringify({
                     type: 'join_lobby',
                     lobbyId: this.currentLobby.id,
-                    userId: this.user.id
+                    userId: this.user.id,
+                    initData: Telegram.WebApp.initData
                 }));
             };
             
             this.socket.onmessage = (event) => {
                 try {
                     const message = JSON.parse(event.data);
+                    console.log('WebSocket message received:', message.type);
                     this.handleWebSocketMessage(message);
                 } catch (error) {
-                    console.error('WebSocket message error:', error);
+                    console.error('WebSocket message parsing error:', error);
                 }
             };
 
@@ -566,9 +574,17 @@ class QuantumTicTacToe {
                 console.error('WebSocket error:', error);
             };
 
-            this.socket.onclose = () => {
-                console.log('WebSocket connection closed');
-                if (this.currentLobby) {
+            this.socket.onclose = (event) => {
+                console.log('WebSocket connection closed:', event.code, event.reason);
+                
+                if (this.heartbeatInterval) {
+                    clearInterval(this.heartbeatInterval);
+                    this.heartbeatInterval = null;
+                }
+
+                if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectWebSocket();
+                } else if (this.currentLobby) {
                     this.showError('Connection lost. Returning to main menu.');
                     this.leaveLobby();
                 }
@@ -576,10 +592,36 @@ class QuantumTicTacToe {
             
         } catch (error) {
             console.error('WebSocket setup error:', error);
+            this.showError('Failed to connect to game server');
         }
     }
 
+    reconnectWebSocket() {
+        this.reconnectAttempts++;
+        console.log(`Reconnecting attempt ${this.reconnectAttempts}...`);
+        
+        setTimeout(() => {
+            if (this.currentLobby) {
+                this.setupWebSocket();
+            }
+        }, 2000 * this.reconnectAttempts);
+    }
+
+    startHeartbeat() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+        }
+        
+        this.heartbeatInterval = setInterval(() => {
+            if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+                this.socket.send(JSON.stringify({ type: 'ping' }));
+            }
+        }, 30000);
+    }
+
     handleWebSocketMessage(message) {
+        console.log('Processing message:', message.type);
+        
         switch (message.type) {
             case 'player_joined':
             case 'player_left':
@@ -602,11 +644,20 @@ class QuantumTicTacToe {
                 this.cleanupGame();
                 this.showLobbyView();
                 break;
+                
+            case 'error':
+                this.showError(message.message || 'Server error');
+                break;
+                
+            case 'pong':
+                break;
+                
+            default:
+                console.log('Unknown message type:', message.type);
         }
     }
 
     updateGameView() {
-        // Обновляем статус игры
         const gameStatus = document.querySelector('.game-status');
         if (gameStatus) {
             gameStatus.textContent = this.getCurrentPlayerSymbol() === 'X' ? 

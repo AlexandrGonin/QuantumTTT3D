@@ -88,11 +88,32 @@ export const api = {
         }
         
         return response.json();
+    },
+
+    async getLobby(lobbyId) {
+        const response = await fetch(`${API_BASE_URL}/lobby/${lobbyId}`);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to get lobby: ${response.status}`);
+        }
+        
+        return response.json();
     }
 };
 
 export function createWebSocketConnection() {
-    // Правильное создание WebSocket соединения
-    const wsUrl = API_BASE_URL.replace('https://', 'wss://').replace('http://', 'ws://');
-    return new WebSocket(wsUrl);
+    try {
+        // Правильное создание WebSocket соединения для Render
+        const wsUrl = API_BASE_URL
+            .replace('https://', 'wss://')
+            .replace('http://', 'ws://');
+        
+        console.log('Connecting to WebSocket:', wsUrl);
+        return new WebSocket(wsUrl);
+        
+    } catch (error) {
+        console.error('WebSocket creation error:', error);
+        throw new Error('Failed to create WebSocket connection');
+    }
 }
