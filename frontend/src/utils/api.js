@@ -2,6 +2,8 @@ const API_BASE_URL = 'https://quantumttt3d-backend.onrender.com';
 
 export async function initAuth(initData) {
     try {
+        console.log('Sending auth request with initData:', initData ? 'present' : 'missing');
+        
         const response = await fetch(`${API_BASE_URL}/auth`, {
             method: 'POST',
             headers: {
@@ -10,8 +12,19 @@ export async function initAuth(initData) {
             body: JSON.stringify({ initData })
         });
 
+        console.log('Auth response status:', response.status);
+
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
+            const errorText = await response.text();
+            console.error('Auth error response:', errorText);
+            
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch (e) {
+                throw new Error(`HTTP error: ${response.status} - ${errorText}`);
+            }
+            
             throw new Error(errorData.error || `HTTP error: ${response.status}`);
         }
 
@@ -21,10 +34,11 @@ export async function initAuth(initData) {
             throw new Error(data.error || 'Authentication failed');
         }
 
+        console.log('Auth successful, user:', data.user.id);
         return data.user;
 
     } catch (error) {
-        console.error('Auth error:', error);
+        console.error('Auth request error:', error);
         throw new Error('Authentication failed: ' + error.message);
     }
 }
@@ -104,7 +118,6 @@ export const api = {
 
 export function createWebSocketConnection() {
     try {
-        // Правильное создание WebSocket соединения для Render
         const wsUrl = API_BASE_URL
             .replace('https://', 'wss://')
             .replace('http://', 'ws://');
