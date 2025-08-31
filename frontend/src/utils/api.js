@@ -90,8 +90,29 @@ export const api = {
 };
 
 export function createWebSocketConnection() {
-    // Правильный URL для WebSocket на Render
-    const wsUrl = API_BASE_URL.replace('https://', 'wss://');
-    console.log('Connecting to WebSocket:', wsUrl);
-    return new WebSocket(wsUrl);
+    return new Promise((resolve, reject) => {
+        const wsUrl = API_BASE_URL.replace('https://', 'wss://');
+        const ws = new WebSocket(wsUrl);
+        
+        const timeout = setTimeout(() => {
+            reject(new Error('WebSocket connection timeout'));
+        }, 5000);
+
+        ws.onopen = () => {
+            clearTimeout(timeout);
+            console.log('WebSocket connection established');
+            resolve(ws);
+        };
+
+        ws.onerror = (error) => {
+            clearTimeout(timeout);
+            console.error('WebSocket connection error:', error);
+            reject(new Error('WebSocket connection failed'));
+        };
+
+        ws.onclose = (event) => {
+            clearTimeout(timeout);
+            console.log('WebSocket connection closed:', event.code, event.reason);
+        };
+    });
 }
