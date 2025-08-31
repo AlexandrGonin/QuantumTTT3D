@@ -1,262 +1,18 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    height: 100vh;
-    overflow: hidden;
-}
-
-#app {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Screens */
-.screen {
-    display: none;
-}
-
-.screen.active {
-    display: flex;
-}
-
-#auth-screen {
-    justify-content: center;
-    align-items: center;
-}
-
-#game-screen {
-    position: relative;
-}
-
-/* Auth Screen */
-.auth-container {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    padding: 30px;
-    border-radius: 20px;
-    text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    max-width: 300px;
-}
-
-.auth-container h2 {
-    margin-bottom: 15px;
-    font-size: 1.5rem;
-}
-
-/* Game Canvas */
-#game-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-}
-
-/* UI Overlay */
-#ui-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 100;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-}
-
-/* Center Container */
-.center-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    max-width: 400px;
-}
-
-/* User Card */
-.user-card {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    padding: 20px;
-    border-radius: 20px;
-    margin-bottom: 30px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    width: 100%;
-}
-
-.user-avatar {
-    font-size: 2rem;
-    width: 50px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-}
-
-.user-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.user-name {
-    font-size: 1.2rem;
-    font-weight: 600;
-}
-
-.user-username {
-    opacity: 0.8;
-    font-size: 0.9rem;
-}
-
-/* Menu Buttons */
-.menu-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    width: 100%;
-}
-
-.menu-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 15px 20px;
-    border: none;
-    border-radius: 15px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    width: 100%;
-}
-
-.menu-btn.primary {
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
-    color: white;
-}
-
-.menu-btn.secondary {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-}
-
-.menu-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-/* Forms */
-.form-card {
+/* Game Styles */
+.game-container {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(20px);
     padding: 30px;
     border-radius: 25px;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    width: 100%;
-}
-
-.form-title {
     text-align: center;
-    margin-bottom: 25px;
-    font-size: 1.5rem;
-    font-weight: 700;
 }
 
-.input-group {
-    margin-bottom: 20px;
+.game-controls {
+    margin-top: 20px;
 }
 
-.input-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    opacity: 0.9;
-}
-
-.text-input {
-    width: 100%;
-    padding: 15px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    font-size: 1rem;
-    outline: none;
-}
-
-.text-input:focus {
-    border-color: rgba(255, 255, 255, 0.6);
-}
-
-.text-input::placeholder {
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.form-buttons {
-    display: flex;
-    gap: 15px;
-    justify-content: space-between;
-}
-
-.btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    flex: 1;
-    justify-content: center;
-}
-
-.btn.primary {
-    background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-    color: white;
-}
-
-.btn.secondary {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-}
-
-.btn.danger {
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
-    color: white;
-}
-
-.btn.share-btn {
-    background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
-    color: white;
-}
-
-.btn:hover {
-    transform: translateY(-2px);
-}
-
-/* Lobby View */
+/* Lobby Styles */
 .lobby-card {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(20px);
@@ -264,13 +20,13 @@ body {
     border-radius: 25px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     width: 100%;
+    max-width: 400px;
 }
 
 .lobby-title {
     text-align: center;
     margin-bottom: 10px;
     font-size: 1.4rem;
-    font-weight: 700;
 }
 
 .lobby-id {
@@ -291,7 +47,6 @@ body {
 .players-list h3 {
     margin-bottom: 15px;
     opacity: 0.9;
-    text-align: center;
 }
 
 .player-item {
@@ -326,13 +81,6 @@ body {
     font-weight: 600;
 }
 
-.lobby-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin: 20px 0;
-}
-
 .lobby-status {
     text-align: center;
     margin: 20px 0;
@@ -343,45 +91,56 @@ body {
     font-size: 1.1rem;
 }
 
-/* Icons */
-.btn-icon {
-    font-size: 1.1rem;
+/* List Styles */
+.list-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    padding: 30px;
+    border-radius: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 100%;
+    max-width: 400px;
 }
 
-/* Responsive */
-@media (max-width: 480px) {
-    #ui-overlay {
-        padding: 15px;
-    }
-    
-    .form-card, .lobby-card {
-        padding: 20px;
-    }
-    
-    .user-card {
-        flex-direction: column;
-        text-align: center;
-        padding: 15px;
-    }
-    
-    .form-buttons {
-        flex-direction: column;
-    }
-    
-    .btn {
-        width: 100%;
-    }
-    
-    .lobby-actions {
-        flex-direction: column;
-    }
+.lobby-list {
+    margin: 20px 0;
+    max-height: 300px;
+    overflow-y: auto;
 }
 
-/* Utility Classes */
-.clickable {
-    pointer-events: auto !important;
+.lobby-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.hidden {
-    display: none !important;
+.lobby-item:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(5px);
+}
+
+.lobby-info {
+    flex: 1;
+}
+
+.lobby-name {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.lobby-players {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.lobby-join {
+    font-size: 1.2rem;
+    opacity: 0.7;
 }

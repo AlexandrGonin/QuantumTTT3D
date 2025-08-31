@@ -23,7 +23,6 @@ export async function initAuth(initData) {
         return data.user;
 
     } catch (error) {
-        console.error('Auth error:', error);
         throw new Error('Authentication failed: ' + error.message);
     }
 }
@@ -32,9 +31,7 @@ export const api = {
     async createLobby(userId, lobbyName = 'Quantum Lobby') {
         const response = await fetch(`${API_BASE_URL}/lobby/create`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json' 
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId, lobbyName })
         });
         
@@ -48,9 +45,7 @@ export const api = {
     async joinLobby(userId, lobbyId) {
         const response = await fetch(`${API_BASE_URL}/lobby/join`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json' 
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId, lobbyId })
         });
         
@@ -61,12 +56,20 @@ export const api = {
         return response.json();
     },
 
+    async getLobbies() {
+        const response = await fetch(`${API_BASE_URL}/lobby/list`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to get lobbies: ${response.status}`);
+        }
+        
+        return response.json();
+    },
+
     async leaveLobby(userId, lobbyId) {
         const response = await fetch(`${API_BASE_URL}/lobby/${lobbyId}/leave`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json' 
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId })
         });
         
@@ -77,13 +80,21 @@ export const api = {
         return response.json();
     },
 
-    async getLobby(lobbyId) {
-        const response = await fetch(`${API_BASE_URL}/lobby/${lobbyId}`);
+    async startGame(userId, lobbyId) {
+        const response = await fetch(`${API_BASE_URL}/lobby/${lobbyId}/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId })
+        });
         
         if (!response.ok) {
-            throw new Error(`Failed to get lobby: ${response.status}`);
+            throw new Error(`Failed to start game: ${response.status}`);
         }
         
         return response.json();
     }
 };
+
+export function createWebSocketConnection() {
+    return new WebSocket('wss://quantumttt3d-backend.onrender.com');
+}
