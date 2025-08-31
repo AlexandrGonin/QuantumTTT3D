@@ -90,5 +90,8 @@ export const api = {
 };
 
 export function createWebSocketConnection() {
-    return new WebSocket('wss://quantumttt3d-backend.onrender.com');
+    // Правильный URL для WebSocket на Render
+    const wsUrl = API_BASE_URL.replace('https://', 'wss://');
+    console.log('Connecting to WebSocket:', wsUrl);
+    return new WebSocket(wsUrl);
 }
