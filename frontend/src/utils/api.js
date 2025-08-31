@@ -68,7 +68,8 @@ export const api = {
         });
         
         if (!response.ok) {
-            throw new Error(`Failed to leave lobby: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to leave lobby: ${response.status}`);
         }
         
         return response.json();
@@ -82,7 +83,19 @@ export const api = {
         });
         
         if (!response.ok) {
-            throw new Error(`Failed to start game: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to start game: ${response.status}`);
+        }
+        
+        return response.json();
+    },
+
+    async getLobby(lobbyId) {
+        const response = await fetch(`${API_BASE_URL}/lobby/${lobbyId}`);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to get lobby: ${response.status}`);
         }
         
         return response.json();
@@ -90,5 +103,7 @@ export const api = {
 };
 
 export function createWebSocketConnection() {
-    return new WebSocket('wss://quantumttt3d-backend.onrender.com');
+    // Заменяем wss на https и меняем порт
+    const wsUrl = API_BASE_URL.replace('https://', 'wss://').replace('http://', 'ws://');
+    return new WebSocket(wsUrl);
 }

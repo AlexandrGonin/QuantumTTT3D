@@ -32,6 +32,7 @@ class QuantumTicTacToe {
             window.confirmJoinLobby = () => this.confirmJoinLobby();
             window.backToMain = () => this.showMainMenu();
             window.startGame = () => this.startGame();
+            window.shareLobby = () => this.shareLobby();
             
         } catch (error) {
             console.error('Initialization error:', error);
@@ -231,20 +232,47 @@ class QuantumTicTacToe {
                         }
                     </div>
 
-                    ${isHost && this.currentLobby.players.length === 2 ? `
-                        <button class="btn primary" onclick="startGame()">
-                            <span class="btn-icon">🚀</span>
-                            Start Game
-                        </button>
-                    ` : ''}
+                    <div class="lobby-actions">
+                        ${isHost ? `
+                            <button class="btn share-btn" onclick="shareLobby()">
+                                <span class="btn-icon">📤</span>
+                                Share Lobby
+                            </button>
+                        ` : ''}
+                        
+                        ${isHost && this.currentLobby.players.length === 2 ? `
+                            <button class="btn primary" onclick="startGame()">
+                                <span class="btn-icon">🚀</span>
+                                Start Game
+                            </button>
+                        ` : ''}
 
-                    <button class="btn danger" onclick="leaveLobby()">
-                        <span class="btn-icon">🚪</span>
-                        Leave Lobby
-                    </button>
+                        <button class="btn danger" onclick="leaveLobby()">
+                            <span class="btn-icon">🚪</span>
+                            Leave Lobby
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
+    }
+
+    shareLobby() {
+        if (!this.currentLobby) return;
+        
+        const shareText = `Join my Quantum 3D Tic-Tac-Toe game! Lobby Code: ${this.currentLobby.id}`;
+        
+        if (navigator.share) {
+            navigator.share({
+                title: 'Quantum 3D Tic-Tac-Toe',
+                text: shareText
+            });
+        } else {
+            Telegram.WebApp.showPopup({
+                title: 'Share Lobby Code',
+                message: `Lobby Code: ${this.currentLobby.id}\n\nShare this code with your friend!`
+            });
+        }
     }
 
     async startGame() {
@@ -288,10 +316,15 @@ class QuantumTicTacToe {
         const canvas = document.getElementById('game-canvas');
         if (!canvas) return;
 
+        // Очистка предыдущей игры
         if (this.game) {
+            if (this.game.renderer) {
+                this.game.renderer.dispose();
+            }
             canvas.innerHTML = '';
         }
 
+        // Создание сцены
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ 
@@ -303,84 +336,75 @@ class QuantumTicTacToe {
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setClearColor(0x000000, 0);
 
-        const geometry = new THREE.BoxGeometry(2, 2, 2);
-        const material = new THREE.MeshBasicMaterial({ 
-            color: 0x00ff00,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.8
-        });
-        
-        const cube = new THREE.Mesh(geometry, material);
-        scene.add(cube);
+        // Создание 3D куба (игрового поля 3x3x3)
+        this.createGameBoard(scene);
 
-        const light = new THREE.AmbientLight(0x404040);
-        scene.add(light);
+        // Освещение
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        directionalLight.position.set(1, 1, 1);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(1, 1, 1).normalize();
         scene.add(directionalLight);
 
-        camera.position.z = 5;
+        // Позиция камеры
+        camera.position.set(4, 4, 4);
+        camera.lookAt(0, 0, 0);
 
+        // Управление вращением
         let isDragging = false;
         let previousMousePosition = { x: 0, y: 0 };
-        let rotationSpeed = 0.02;
+        let rotationSpeed = 0.005;
 
-        const onMouseDown = (event) => {
+        const onPointerDown = (event) => {
             isDragging = true;
             previousMousePosition = {
-                x: event.clientX,
-                y: event.clientY
+                x: event.clientX || event.touches[0].clientX,
+                y: event.clientY || event.touches[0].clientY
             };
         };
 
-        const onMouseMove = (event) => {
+        const onPointerMove = (event) => {
             if (!isDragging) return;
 
+            const clientX = event.clientX || (event.touches && event.touches[0].clientX);
+            const clientY = event.clientY || (event.touches && event.touches[0].clientY);
+
             const deltaMove = {
-                x: event.clientX - previousMousePosition.x,
-                y: event.clientY - previousMousePosition.y
+                x: clientX - previousMousePosition.x,
+                y: clientY - previousMousePosition.y
             };
 
-            cube.rotation.y += deltaMove.x * 0.01;
-            cube.rotation.x += deltaMove.y * 0.01;
+            scene.rotation.y += deltaMove.x * rotationSpeed;
+            scene.rotation.x += deltaMove.y * rotationSpeed;
 
             previousMousePosition = {
-                x: event.clientX,
-                y: event.clientY
+                x: clientX,
+                y: clientY
             };
         };
 
-        const onMouseUp = () => {
+        const onPointerUp = () => {
             isDragging = false;
         };
 
-        canvas.addEventListener('mousedown', onMouseDown);
-        canvas.addEventListener('mousemove', onMouseMove);
-        canvas.addEventListener('mouseup', onMouseUp);
+        // Обработчики событий
+        canvas.addEventListener('mousedown', onPointerDown);
+        canvas.addEventListener('mousemove', onPointerMove);
+        canvas.addEventListener('mouseup', onPointerUp);
 
-        canvas.addEventListener('touchstart', (event) => {
-            event.preventDefault();
-            onMouseDown(event.touches[0]);
-        });
+        canvas.addEventListener('touchstart', onPointerDown, { passive: true });
+        canvas.addEventListener('touchmove', onPointerMove, { passive: true });
+        canvas.addEventListener('touchend', onPointerUp);
 
-        canvas.addEventListener('touchmove', (event) => {
-            event.preventDefault();
-            onMouseMove(event.touches[0]);
-        });
-
-        canvas.addEventListener('touchend', (event) => {
-            event.preventDefault();
-            onMouseUp();
-        });
-
+        // Анимация
         const animate = () => {
             requestAnimationFrame(animate);
             
+            // Плавное вращение когда не dragging
             if (!isDragging) {
-                cube.rotation.x += rotationSpeed * 0.1;
-                cube.rotation.y += rotationSpeed * 0.1;
+                scene.rotation.x += rotationSpeed * 0.3;
+                scene.rotation.y += rotationSpeed * 0.2;
             }
             
             renderer.render(scene, camera);
@@ -388,26 +412,74 @@ class QuantumTicTacToe {
 
         animate();
 
-        this.game = { scene, camera, renderer, cube, animate };
+        // Сохранение ссылок для cleanup
+        this.game = { 
+            scene, 
+            camera, 
+            renderer, 
+            animate,
+            eventListeners: {
+                mousedown: onPointerDown,
+                mousemove: onPointerMove,
+                mouseup: onPointerUp,
+                touchstart: onPointerDown,
+                touchmove: onPointerMove,
+                touchend: onPointerUp
+            }
+        };
+    }
+
+    createGameBoard(scene) {
+        // Создаем сетку 3x3x3 ячеек
+        const cellSize = 0.8;
+        const spacing = 1.0;
+        
+        for (let x = -1; x <= 1; x++) {
+            for (let y = -1; y <= 1; y++) {
+                for (let z = -1; z <= 1; z++) {
+                    this.createCell(scene, x, y, z, cellSize, spacing);
+                }
+            }
+        }
+
+        // Добавляем оси для ориентации
+        this.createAxes(scene);
+    }
+
+    createCell(scene, x, y, z, size, spacing) {
+        const geometry = new THREE.BoxGeometry(size, size, size);
+        const material = new THREE.MeshPhongMaterial({
+            color: 0x1e88e5,
+            transparent: true,
+            opacity: 0.3,
+            wireframe: false
+        });
+
+        const cell = new THREE.Mesh(geometry, material);
+        cell.position.set(x * spacing, y * spacing, z * spacing);
+        cell.userData = { x, y, z, occupied: false };
+        
+        scene.add(cell);
+
+        // Добавляем рамку вокруг ячейки
+        const edges = new THREE.EdgesGeometry(geometry);
+        const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffffff }));
+        cell.add(line);
+    }
+
+    createAxes(scene) {
+        const axesHelper = new THREE.AxesHelper(2);
+        scene.add(axesHelper);
     }
 
     async leaveLobby() {
         try {
-            if (!this.currentLobby) return;
+            if (this.currentLobby) {
+                await api.leaveLobby(this.user.id, this.currentLobby.id);
+            }
             
-            await api.leaveLobby(this.user.id, this.currentLobby.id);
+            this.cleanupGame();
             this.currentLobby = null;
-            
-            if (this.socket) {
-                this.socket.close();
-                this.socket = null;
-            }
-            
-            if (this.game) {
-                this.game.renderer.dispose();
-                this.game = null;
-            }
-            
             this.showMainMenu();
             
         } catch (error) {
@@ -416,35 +488,70 @@ class QuantumTicTacToe {
         }
     }
 
+    cleanupGame() {
+        if (this.socket) {
+            this.socket.close();
+            this.socket = null;
+        }
+
+        if (this.game) {
+            const canvas = document.getElementById('game-canvas');
+            if (canvas) {
+                canvas.removeEventListener('mousedown', this.game.eventListeners.mousedown);
+                canvas.removeEventListener('mousemove', this.game.eventListeners.mousemove);
+                canvas.removeEventListener('mouseup', this.game.eventListeners.mouseup);
+                canvas.removeEventListener('touchstart', this.game.eventListeners.touchstart);
+                canvas.removeEventListener('touchmove', this.game.eventListeners.touchmove);
+                canvas.removeEventListener('touchend', this.game.eventListeners.touchend);
+            }
+
+            if (this.game.renderer) {
+                this.game.renderer.dispose();
+            }
+            
+            cancelAnimationFrame(this.game.animate);
+            this.game = null;
+        }
+    }
+
     setupWebSocket() {
         if (!this.currentLobby) return;
         
-        this.socket = createWebSocketConnection();
-        
-        this.socket.onopen = () => {
-            this.socket.send(JSON.stringify({
-                type: 'join_lobby',
-                lobbyId: this.currentLobby.id,
-                userId: this.user.id
-            }));
-        };
-        
-        this.socket.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                this.handleWebSocketMessage(message);
-            } catch (error) {
-                console.error('WebSocket message error:', error);
-            }
-        };
+        try {
+            this.socket = createWebSocketConnection();
+            
+            this.socket.onopen = () => {
+                this.socket.send(JSON.stringify({
+                    type: 'join_lobby',
+                    lobbyId: this.currentLobby.id,
+                    userId: this.user.id
+                }));
+            };
+            
+            this.socket.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    this.handleWebSocketMessage(message);
+                } catch (error) {
+                    console.error('WebSocket message error:', error);
+                }
+            };
 
-        this.socket.onerror = (error) => {
-            console.error('WebSocket error:', error);
-        };
+            this.socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
 
-        this.socket.onclose = () => {
-            console.log('WebSocket connection closed');
-        };
+            this.socket.onclose = () => {
+                console.log('WebSocket connection closed');
+                if (this.currentLobby) {
+                    this.showError('Connection lost. Returning to main menu.');
+                    this.leaveLobby();
+                }
+            };
+            
+        } catch (error) {
+            console.error('WebSocket setup error:', error);
+        }
     }
 
     handleWebSocketMessage(message) {
@@ -459,6 +566,11 @@ class QuantumTicTacToe {
                 this.currentLobby = message.lobby;
                 this.init3DGame();
                 break;
+                
+            case 'game_update':
+                // Здесь будет обработка ходов игры
+                console.log('Game update:', message);
+                break;
         }
     }
 
@@ -468,6 +580,19 @@ class QuantumTicTacToe {
             message: message
         });
     }
+
+    // Обработка изменения размера окна
+    handleResize() {
+        if (this.game && this.game.camera && this.game.renderer) {
+            this.game.camera.aspect = window.innerWidth / window.innerHeight;
+            this.game.camera.updateProjectionMatrix();
+            this.game.renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    }
 }
 
+// Инициализация приложения
 const app = new QuantumTicTacToe();
+
+// Обработка изменения размера окна
+window.addEventListener('resize', () => app.handleResize());
