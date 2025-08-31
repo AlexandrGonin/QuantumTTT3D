@@ -17,7 +17,6 @@ class QuantumTicTacToe {
                 return;
             }
 
-            // Отключаем масштабирование
             this.disableZoom();
             
             Telegram.WebApp.ready();
@@ -26,16 +25,13 @@ class QuantumTicTacToe {
             this.user = await initAuth(Telegram.WebApp.initData);
             this.showMainMenu();
             
-            // Глобальные функции
             window.createLobby = () => this.showCreateLobby();
             window.joinLobby = () => this.showJoinLobby();
             window.leaveLobby = () => this.leaveLobby();
-            window.showLobbyList = () => this.showLobbyList();
             window.confirmCreateLobby = () => this.confirmCreateLobby();
             window.confirmJoinLobby = () => this.confirmJoinLobby();
             window.backToMain = () => this.showMainMenu();
             window.startGame = () => this.startGame();
-            window.joinLobbyById = (lobbyId) => this.joinLobby(lobbyId);
             
         } catch (error) {
             console.error('Initialization error:', error);
@@ -46,14 +42,12 @@ class QuantumTicTacToe {
         }
     }
 
-    // Отключаем масштабирование на телефоне
     disableZoom() {
         const viewport = document.querySelector('meta[name="viewport"]');
         if (viewport) {
             viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
         }
         
-        // Дополнительная защита от масштабирования
         document.addEventListener('touchstart', function(e) {
             if (e.touches.length > 1) {
                 e.preventDefault();
@@ -83,9 +77,9 @@ class QuantumTicTacToe {
                         <span class="btn-icon">➕</span>
                         Create Lobby
                     </button>
-                    <button class="menu-btn secondary" onclick="showLobbyList()">
-                        <span class="btn-icon">🔍</span>
-                        Join Lobby
+                    <button class="menu-btn secondary" onclick="joinLobby()">
+                        <span class="btn-icon">🔢</span>
+                        Join by Code
                     </button>
                 </div>
             </div>
@@ -151,61 +145,6 @@ class QuantumTicTacToe {
         `;
     }
 
-    async showLobbyList() {
-        try {
-            const response = await api.getLobbies();
-            
-            if (!response.lobbies || response.lobbies.length === 0) {
-                Telegram.WebApp.showPopup({
-                    title: 'No Lobbies',
-                    message: 'No available lobbies. Create one first!'
-                });
-                this.showJoinLobby();
-                return;
-            }
-
-            this.currentView = 'lobby-list';
-            const overlay = document.getElementById('ui-overlay');
-            
-            const lobbiesHtml = response.lobbies.map(lobby => `
-                <div class="lobby-item" onclick="joinLobbyById('${lobby.id}')">
-                    <div class="lobby-info">
-                        <div class="lobby-name">${lobby.name}</div>
-                        <div class="lobby-players">${lobby.players || 0}/2 players</div>
-                    </div>
-                    <div class="lobby-join">→</div>
-                </div>
-            `).join('');
-
-            overlay.innerHTML = `
-                <div class="center-container">
-                    <div class="list-card">
-                        <h2 class="form-title">Available Lobbies</h2>
-                        
-                        <div class="lobby-list">
-                            ${lobbiesHtml}
-                        </div>
-
-                        <div class="form-buttons">
-                            <button class="btn secondary" onclick="showJoinLobby()">
-                                <span class="btn-icon">🔢</span>
-                                Enter Code
-                            </button>
-                            <button class="btn secondary" onclick="backToMain()">
-                                <span class="btn-icon">←</span>
-                                Back
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-        } catch (error) {
-            console.error('Lobby list error:', error);
-            this.showJoinLobby();
-        }
-    }
-
     async confirmCreateLobby() {
         const lobbyNameInput = document.getElementById('lobbyName');
         const lobbyName = lobbyNameInput ? lobbyNameInput.value.trim() : 'Quantum Lobby';
@@ -244,14 +183,8 @@ class QuantumTicTacToe {
             return;
         }
 
-        await this.joinLobby(lobbyCode);
-    }
-
-    async joinLobby(lobbyId) {
         try {
-            console.log('Joining lobby:', lobbyId);
-            
-            const response = await api.joinLobby(this.user.id, lobbyId);
+            const response = await api.joinLobby(this.user.id, lobbyCode);
             
             if (response.success) {
                 this.currentLobby = response.lobby;
@@ -355,12 +288,10 @@ class QuantumTicTacToe {
         const canvas = document.getElementById('game-canvas');
         if (!canvas) return;
 
-        // Очищаем предыдущую сцену
         if (this.game) {
             canvas.innerHTML = '';
         }
 
-        // Создаем сцену Three.js
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ 
@@ -372,7 +303,6 @@ class QuantumTicTacToe {
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setClearColor(0x000000, 0);
 
-        // Создаем куб
         const geometry = new THREE.BoxGeometry(2, 2, 2);
         const material = new THREE.MeshBasicMaterial({ 
             color: 0x00ff00,
@@ -384,7 +314,6 @@ class QuantumTicTacToe {
         const cube = new THREE.Mesh(geometry, material);
         scene.add(cube);
 
-        // Добавляем освещение
         const light = new THREE.AmbientLight(0x404040);
         scene.add(light);
 
@@ -394,12 +323,10 @@ class QuantumTicTacToe {
 
         camera.position.z = 5;
 
-        // Переменные для управления вращением
         let isDragging = false;
         let previousMousePosition = { x: 0, y: 0 };
         let rotationSpeed = 0.02;
 
-        // Обработчики событий для вращения куба
         const onMouseDown = (event) => {
             isDragging = true;
             previousMousePosition = {
@@ -429,12 +356,10 @@ class QuantumTicTacToe {
             isDragging = false;
         };
 
-        // Добавляем обработчики событий
         canvas.addEventListener('mousedown', onMouseDown);
         canvas.addEventListener('mousemove', onMouseMove);
         canvas.addEventListener('mouseup', onMouseUp);
 
-        // Для touch устройств
         canvas.addEventListener('touchstart', (event) => {
             event.preventDefault();
             onMouseDown(event.touches[0]);
@@ -450,12 +375,10 @@ class QuantumTicTacToe {
             onMouseUp();
         });
 
-        // Анимация
         const animate = () => {
             requestAnimationFrame(animate);
             
             if (!isDragging) {
-                // Медленное автоматическое вращение
                 cube.rotation.x += rotationSpeed * 0.1;
                 cube.rotation.y += rotationSpeed * 0.1;
             }
@@ -481,7 +404,6 @@ class QuantumTicTacToe {
             }
             
             if (this.game) {
-                // Очищаем 3D сцену
                 this.game.renderer.dispose();
                 this.game = null;
             }
@@ -548,5 +470,4 @@ class QuantumTicTacToe {
     }
 }
 
-// Initialize the app
 const app = new QuantumTicTacToe();
