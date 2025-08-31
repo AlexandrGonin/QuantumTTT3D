@@ -86,33 +86,114 @@ export const api = {
         }
         
         return response.json();
+    },
+
+    async getLobby(lobbyId) {
+        const response = await fetch(`${API_BASE_URL}/lobby/${lobbyId}`);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to get lobby: ${response.status}`);
+        }
+        
+        return response.json();
+    },
+
+    async pollGameUpdates(lobbyId, userId, lastUpdate = 0) {
+        const response = await fetch(`${API_BASE_URL}/game/poll`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lobbyId, userId, lastUpdate })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to poll updates: ${response.status}`);
+        }
+        
+        return response.json();
+    },
+
+    async sendGameMessage(lobbyId, userId, message) {
+        const response = await fetch(`${API_BASE_URL}/game/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lobbyId, userId, message })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to send message: ${response.status}`);
+        }
+        
+        return response.json();
     }
 };
 
-export function createWebSocketConnection() {
-    return new Promise((resolve, reject) => {
-        const wsUrl = API_BASE_URL.replace('https://', 'wss://');
-        const ws = new WebSocket(wsUrl);
-        
-        const timeout = setTimeout(() => {
-            reject(new Error('WebSocket connection timeout'));
-        }, 5000);
+// Класс для управления игровым соединением через HTTP long-polling
+export class GameConnection {
+    constructor(lobbyId, userId, onMessage) {
+        this.lobbyId = lobbyId;
+        this.userId = userId;
+        this.onMessage = onMessage;
+        this.isConnected = true;
+        this.lastUpdate = Date.now();
+        this.pollInterval = null;
+        this.startPolling();
+    }
 
-        ws.onopen = () => {
-            clearTimeout(timeout);
-            console.log('WebSocket connection established');
-            resolve(ws);
-        };
+    async startPolling() {
+        while (this.isConnected) {
+            try {
+                const response = await api.pollGameUpdates(this.lobbyId, this.userId, this.lastUpdate);
+                
+                if (response.success && response.updates && response.updates.length > 0) {
+                    response.updates.forEach(update => {
+                        this.onMessage(update);
+                        this.lastUpdate = Math.max(this.lastUpdate, update.timestamp || Date.now());
+                    });
+                }
+                
+                // Ждем 2 секунды перед следующим запросом
+                await new Promise(resolve => {
+                    if (this.isConnected) {
+                        this.pollInterval = setTimeout(resolve, 2000);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Polling error:', error);
+                
+                // При ошибке ждем 5 секунд перед повторной попыткой
+                await new Promise(resolve => {
+                    if (this.isConnected) {
+                        this.pollInterval = setTimeout(resolve, 5000);
+                    }
+                });
+            }
+        }
+    }
 
-        ws.onerror = (error) => {
-            clearTimeout(timeout);
-            console.error('WebSocket connection error:', error);
-            reject(new Error('WebSocket connection failed'));
-        };
+    async send(message) {
+        try {
+            const response = await api.sendGameMessage(this.lobbyId, this.userId, message);
+            return response;
+        } catch (error) {
+            console.error('Send message error:', error);
+            throw error;
+        }
+    }
 
-        ws.onclose = (event) => {
-            clearTimeout(timeout);
-            console.log('WebSocket connection closed:', event.code, event.reason);
-        };
-    });
+    close() {
+        this.isConnected = false;
+        if (this.pollInterval) {
+            clearTimeout(this.pollInterval);
+        }
+        console.log('Game connection closed');
+    }
+}
+
+// Альтернативная функция для создания соединения
+export function createGameConnection(lobbyId, userId, onMessage) {
+    return new GameConnection(lobbyId, userId, onMessage);
 }
