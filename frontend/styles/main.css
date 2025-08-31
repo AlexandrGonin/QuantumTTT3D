@@ -532,3 +532,30 @@ body {
     font-size: 1.2rem;
     opacity: 0.7;
 }
+
+/* Добавляем в конец файла */
+
+.game-controls-bottom {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+}
+
+.game-controls-bottom .btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    border-radius: 20px;
+    min-width: 120px;
+}
+
+/* Улучшаем обработку touch событий */
+#game-canvas {
+    touch-action: none;
+    cursor: grab;
+}
+
+#game-canvas:active {
+    cursor: grabbing;
+}

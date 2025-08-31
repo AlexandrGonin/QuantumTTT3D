@@ -32,7 +32,6 @@ class QuantumTicTacToe {
             window.confirmJoinLobby = () => this.confirmJoinLobby();
             window.backToMain = () => this.showMainMenu();
             window.startGame = () => this.startGame();
-            window.shareLobby = () => this.shareLobby();
             
         } catch (error) {
             console.error('Initialization error:', error);
@@ -233,13 +232,6 @@ class QuantumTicTacToe {
                     </div>
 
                     <div class="lobby-actions">
-                        ${isHost ? `
-                            <button class="btn share-btn" onclick="shareLobby()">
-                                <span class="btn-icon">📤</span>
-                                Share Lobby
-                            </button>
-                        ` : ''}
-                        
                         ${isHost && this.currentLobby.players.length === 2 ? `
                             <button class="btn primary" onclick="startGame()">
                                 <span class="btn-icon">🚀</span>
@@ -255,24 +247,6 @@ class QuantumTicTacToe {
                 </div>
             </div>
         `;
-    }
-
-    shareLobby() {
-        if (!this.currentLobby) return;
-        
-        const shareText = `Join my Quantum 3D Tic-Tac-Toe game! Lobby Code: ${this.currentLobby.id}`;
-        
-        if (navigator.share) {
-            navigator.share({
-                title: 'Quantum 3D Tic-Tac-Toe',
-                text: shareText
-            });
-        } else {
-            Telegram.WebApp.showPopup({
-                title: 'Share Lobby Code',
-                message: `Lobby Code: ${this.currentLobby.id}\n\nShare this code with your friend!`
-            });
-        }
     }
 
     async startGame() {
@@ -295,17 +269,11 @@ class QuantumTicTacToe {
     init3DGame() {
         const overlay = document.getElementById('ui-overlay');
         overlay.innerHTML = `
-            <div class="center-container">
-                <div class="game-container">
-                    <h2>Quantum 3D Tic-Tac-Toe</h2>
-                    <p>Rotate the cube with your finger</p>
-                    <div class="game-controls">
-                        <button class="btn danger" onclick="leaveLobby()">
-                            <span class="btn-icon">←</span>
-                            Leave Game
-                        </button>
-                    </div>
-                </div>
+            <div class="game-controls-bottom">
+                <button class="btn danger" onclick="leaveLobby()">
+                    <span class="btn-icon">←</span>
+                    Leave Game
+                </button>
             </div>
         `;
 
@@ -317,12 +285,7 @@ class QuantumTicTacToe {
         if (!canvas) return;
 
         // Очистка предыдущей игры
-        if (this.game) {
-            if (this.game.renderer) {
-                this.game.renderer.dispose();
-            }
-            canvas.innerHTML = '';
-        }
+        this.cleanupGame();
 
         // Создание сцены
         const scene = new THREE.Scene();
@@ -354,7 +317,7 @@ class QuantumTicTacToe {
         // Управление вращением
         let isDragging = false;
         let previousMousePosition = { x: 0, y: 0 };
-        let rotationSpeed = 0.005;
+        const rotationSpeed = 0.01;
 
         const onPointerDown = (event) => {
             isDragging = true;
@@ -362,6 +325,7 @@ class QuantumTicTacToe {
                 x: event.clientX || event.touches[0].clientX,
                 y: event.clientY || event.touches[0].clientY
             };
+            event.preventDefault();
         };
 
         const onPointerMove = (event) => {
@@ -382,6 +346,8 @@ class QuantumTicTacToe {
                 x: clientX,
                 y: clientY
             };
+            
+            event.preventDefault();
         };
 
         const onPointerUp = () => {
@@ -389,13 +355,21 @@ class QuantumTicTacToe {
         };
 
         // Обработчики событий
-        canvas.addEventListener('mousedown', onPointerDown);
-        canvas.addEventListener('mousemove', onPointerMove);
-        canvas.addEventListener('mouseup', onPointerUp);
+        const handleMouseDown = (e) => onPointerDown(e);
+        const handleMouseMove = (e) => onPointerMove(e);
+        const handleMouseUp = () => onPointerUp();
+        
+        const handleTouchStart = (e) => onPointerDown(e.touches[0]);
+        const handleTouchMove = (e) => onPointerMove(e.touches[0]);
+        const handleTouchEnd = () => onPointerUp();
 
-        canvas.addEventListener('touchstart', onPointerDown, { passive: true });
-        canvas.addEventListener('touchmove', onPointerMove, { passive: true });
-        canvas.addEventListener('touchend', onPointerUp);
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd);
 
         // Анимация
         const animate = () => {
@@ -419,12 +393,12 @@ class QuantumTicTacToe {
             renderer, 
             animate,
             eventListeners: {
-                mousedown: onPointerDown,
-                mousemove: onPointerMove,
-                mouseup: onPointerUp,
-                touchstart: onPointerDown,
-                touchmove: onPointerMove,
-                touchend: onPointerUp
+                mousedown: handleMouseDown,
+                mousemove: handleMouseMove,
+                mouseup: handleMouseUp,
+                touchstart: handleTouchStart,
+                touchmove: handleTouchMove,
+                touchend: handleTouchEnd
             }
         };
     }
@@ -441,9 +415,6 @@ class QuantumTicTacToe {
                 }
             }
         }
-
-        // Добавляем оси для ориентации
-        this.createAxes(scene);
     }
 
     createCell(scene, x, y, z, size, spacing) {
@@ -467,11 +438,6 @@ class QuantumTicTacToe {
         cell.add(line);
     }
 
-    createAxes(scene) {
-        const axesHelper = new THREE.AxesHelper(2);
-        scene.add(axesHelper);
-    }
-
     async leaveLobby() {
         try {
             if (this.currentLobby) {
@@ -489,14 +455,16 @@ class QuantumTicTacToe {
     }
 
     cleanupGame() {
+        // Очистка WebSocket
         if (this.socket) {
             this.socket.close();
             this.socket = null;
         }
 
+        // Очистка Three.js сцены
         if (this.game) {
             const canvas = document.getElementById('game-canvas');
-            if (canvas) {
+            if (canvas && this.game.eventListeners) {
                 canvas.removeEventListener('mousedown', this.game.eventListeners.mousedown);
                 canvas.removeEventListener('mousemove', this.game.eventListeners.mousemove);
                 canvas.removeEventListener('mouseup', this.game.eventListeners.mouseup);
@@ -507,10 +475,25 @@ class QuantumTicTacToe {
 
             if (this.game.renderer) {
                 this.game.renderer.dispose();
+                // Полная очистка canvas
+                const canvas = document.getElementById('game-canvas');
+                if (canvas) {
+                    const context = canvas.getContext('webgl');
+                    if (context) {
+                        context.clear(context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
+                    }
+                    canvas.width = canvas.width; // Reset canvas
+                }
             }
             
             cancelAnimationFrame(this.game.animate);
             this.game = null;
+        }
+
+        // Очистка UI overlay
+        const overlay = document.getElementById('ui-overlay');
+        if (overlay) {
+            overlay.innerHTML = '';
         }
     }
 

@@ -88,22 +88,11 @@ export const api = {
         }
         
         return response.json();
-    },
-
-    async getLobby(lobbyId) {
-        const response = await fetch(`${API_BASE_URL}/lobby/${lobbyId}`);
-        
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `Failed to get lobby: ${response.status}`);
-        }
-        
-        return response.json();
     }
 };
 
 export function createWebSocketConnection() {
-    // Заменяем wss на https и меняем порт
+    // Правильное создание WebSocket соединения
     const wsUrl = API_BASE_URL.replace('https://', 'wss://').replace('http://', 'ws://');
     return new WebSocket(wsUrl);
 }
