@@ -11,7 +11,8 @@ export async function initAuth(initData) {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP error: ${response.status}`);
         }
 
         const data = await response.json();
@@ -23,6 +24,7 @@ export async function initAuth(initData) {
         return data.user;
 
     } catch (error) {
+        console.error('Auth error:', error);
         throw new Error('Authentication failed: ' + error.message);
     }
 }
@@ -36,7 +38,8 @@ export const api = {
         });
         
         if (!response.ok) {
-            throw new Error(`Failed to create lobby: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to create lobby: ${response.status}`);
         }
         
         return response.json();
@@ -50,7 +53,8 @@ export const api = {
         });
         
         if (!response.ok) {
-            throw new Error(`Failed to join lobby: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to join lobby: ${response.status}`);
         }
         
         return response.json();

@@ -17,12 +17,16 @@ class QuantumTicTacToe {
                 return;
             }
 
+            // Отключаем масштабирование
+            this.disableZoom();
+            
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
             
             this.user = await initAuth(Telegram.WebApp.initData);
             this.showMainMenu();
             
+            // Глобальные функции
             window.createLobby = () => this.showCreateLobby();
             window.joinLobby = () => this.showJoinLobby();
             window.leaveLobby = () => this.leaveLobby();
@@ -31,6 +35,7 @@ class QuantumTicTacToe {
             window.confirmJoinLobby = () => this.confirmJoinLobby();
             window.backToMain = () => this.showMainMenu();
             window.startGame = () => this.startGame();
+            window.joinLobbyById = (lobbyId) => this.joinLobby(lobbyId);
             
         } catch (error) {
             console.error('Initialization error:', error);
@@ -39,6 +44,25 @@ class QuantumTicTacToe {
                 message: 'Failed to authenticate. Please try again.',
             });
         }
+    }
+
+    // Отключаем масштабирование на телефоне
+    disableZoom() {
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+            viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+        }
+        
+        // Дополнительная защита от масштабирования
+        document.addEventListener('touchstart', function(e) {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
     }
 
     showMainMenu() {
@@ -132,6 +156,10 @@ class QuantumTicTacToe {
             const response = await api.getLobbies();
             
             if (!response.lobbies || response.lobbies.length === 0) {
+                Telegram.WebApp.showPopup({
+                    title: 'No Lobbies',
+                    message: 'No available lobbies. Create one first!'
+                });
                 this.showJoinLobby();
                 return;
             }
@@ -140,7 +168,7 @@ class QuantumTicTacToe {
             const overlay = document.getElementById('ui-overlay');
             
             const lobbiesHtml = response.lobbies.map(lobby => `
-                <div class="lobby-item" onclick="app.joinLobby('${lobby.id}')">
+                <div class="lobby-item" onclick="joinLobbyById('${lobby.id}')">
                     <div class="lobby-info">
                         <div class="lobby-name">${lobby.name}</div>
                         <div class="lobby-players">${lobby.players || 0}/2 players</div>
@@ -159,6 +187,10 @@ class QuantumTicTacToe {
                         </div>
 
                         <div class="form-buttons">
+                            <button class="btn secondary" onclick="showJoinLobby()">
+                                <span class="btn-icon">🔢</span>
+                                Enter Code
+                            </button>
                             <button class="btn secondary" onclick="backToMain()">
                                 <span class="btn-icon">←</span>
                                 Back
@@ -190,6 +222,11 @@ class QuantumTicTacToe {
                 this.currentLobby = response.lobby;
                 this.setupWebSocket();
                 this.showLobbyView();
+                
+                Telegram.WebApp.showPopup({
+                    title: 'Lobby Created',
+                    message: `Lobby Code: ${this.currentLobby.id}`
+                });
             }
             
         } catch (error) {
@@ -212,12 +249,19 @@ class QuantumTicTacToe {
 
     async joinLobby(lobbyId) {
         try {
+            console.log('Joining lobby:', lobbyId);
+            
             const response = await api.joinLobby(this.user.id, lobbyId);
             
             if (response.success) {
                 this.currentLobby = response.lobby;
                 this.setupWebSocket();
                 this.showLobbyView();
+                
+                Telegram.WebApp.showPopup({
+                    title: 'Success',
+                    message: `Joined lobby: ${this.currentLobby.name}`
+                });
             }
             
         } catch (error) {
@@ -234,7 +278,7 @@ class QuantumTicTacToe {
             <div class="center-container">
                 <div class="lobby-card">
                     <h2 class="lobby-title">${this.currentLobby.name}</h2>
-                    <div class="lobby-id">ID: ${this.currentLobby.id}</div>
+                    <div class="lobby-id">Code: ${this.currentLobby.id}</div>
                     
                     <div class="players-list">
                         <h3>Players (${this.currentLobby.players.length}/2)</h3>
@@ -293,18 +337,17 @@ class QuantumTicTacToe {
             <div class="center-container">
                 <div class="game-container">
                     <h2>Quantum 3D Tic-Tac-Toe</h2>
-                    <p>Game is starting...</p>
+                    <p>Rotate the cube with your finger</p>
                     <div class="game-controls">
-                        <button class="btn secondary" onclick="leaveLobby()">
+                        <button class="btn danger" onclick="leaveLobby()">
                             <span class="btn-icon">←</span>
-                            Back to Lobby
+                            Leave Game
                         </button>
                     </div>
                 </div>
             </div>
         `;
 
-        // Инициализация Three.js сцены с вращающимся кубом
         this.initThreeJS();
     }
 
@@ -312,15 +355,19 @@ class QuantumTicTacToe {
         const canvas = document.getElementById('game-canvas');
         if (!canvas) return;
 
-        // Очищаем предыдущую сцену если есть
+        // Очищаем предыдущую сцену
         if (this.game) {
             canvas.innerHTML = '';
         }
 
-        // Создаем простую 3D сцену с вращающимся кубом
+        // Создаем сцену Three.js
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        const renderer = new THREE.WebGLRenderer({ 
+            canvas: canvas,
+            antialias: true,
+            alpha: true
+        });
         
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setClearColor(0x000000, 0);
@@ -329,25 +376,96 @@ class QuantumTicTacToe {
         const geometry = new THREE.BoxGeometry(2, 2, 2);
         const material = new THREE.MeshBasicMaterial({ 
             color: 0x00ff00,
-            wireframe: true 
+            wireframe: true,
+            transparent: true,
+            opacity: 0.8
         });
+        
         const cube = new THREE.Mesh(geometry, material);
         scene.add(cube);
 
+        // Добавляем освещение
+        const light = new THREE.AmbientLight(0x404040);
+        scene.add(light);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(1, 1, 1);
+        scene.add(directionalLight);
+
         camera.position.z = 5;
 
-        // Анимация вращения
+        // Переменные для управления вращением
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let rotationSpeed = 0.02;
+
+        // Обработчики событий для вращения куба
+        const onMouseDown = (event) => {
+            isDragging = true;
+            previousMousePosition = {
+                x: event.clientX,
+                y: event.clientY
+            };
+        };
+
+        const onMouseMove = (event) => {
+            if (!isDragging) return;
+
+            const deltaMove = {
+                x: event.clientX - previousMousePosition.x,
+                y: event.clientY - previousMousePosition.y
+            };
+
+            cube.rotation.y += deltaMove.x * 0.01;
+            cube.rotation.x += deltaMove.y * 0.01;
+
+            previousMousePosition = {
+                x: event.clientX,
+                y: event.clientY
+            };
+        };
+
+        const onMouseUp = () => {
+            isDragging = false;
+        };
+
+        // Добавляем обработчики событий
+        canvas.addEventListener('mousedown', onMouseDown);
+        canvas.addEventListener('mousemove', onMouseMove);
+        canvas.addEventListener('mouseup', onMouseUp);
+
+        // Для touch устройств
+        canvas.addEventListener('touchstart', (event) => {
+            event.preventDefault();
+            onMouseDown(event.touches[0]);
+        });
+
+        canvas.addEventListener('touchmove', (event) => {
+            event.preventDefault();
+            onMouseMove(event.touches[0]);
+        });
+
+        canvas.addEventListener('touchend', (event) => {
+            event.preventDefault();
+            onMouseUp();
+        });
+
+        // Анимация
         const animate = () => {
             requestAnimationFrame(animate);
             
-            cube.rotation.x += 0.01;
-            cube.rotation.y += 0.01;
+            if (!isDragging) {
+                // Медленное автоматическое вращение
+                cube.rotation.x += rotationSpeed * 0.1;
+                cube.rotation.y += rotationSpeed * 0.1;
+            }
             
             renderer.render(scene, camera);
         };
 
         animate();
-        this.game = { scene, camera, renderer, cube };
+
+        this.game = { scene, camera, renderer, cube, animate };
     }
 
     async leaveLobby() {
@@ -396,6 +514,14 @@ class QuantumTicTacToe {
             } catch (error) {
                 console.error('WebSocket message error:', error);
             }
+        };
+
+        this.socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        this.socket.onclose = () => {
+            console.log('WebSocket connection closed');
         };
     }
 
