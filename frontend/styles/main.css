@@ -559,3 +559,112 @@ body {
 #game-canvas:active {
     cursor: grabbing;
 }
+
+/* Стили для экрана аутентификации */
+.auth-container {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    padding: 40px;
+    border-radius: 25px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    max-width: 300px;
+}
+
+.auth-container h2 {
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+    color: white;
+}
+
+.auth-loading {
+    margin-top: 30px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Выбор слоя */
+.game-controls-top {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 15px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.layer-selector {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.layer-radio {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.layer-radio input[type="radio"] {
+    margin: 0;
+}
+
+/* Статус игры */
+.game-status {
+    color: white;
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px 20px;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+}
+
+.game-controls-bottom {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.game-controls-bottom .btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    border-radius: 20px;
+    min-width: 120px;
+}
+
+/* Улучшаем обработку touch событий */
+#game-canvas {
+    touch-action: none;
+    cursor: grab;
+}
+
+#game-canvas:active {
+    cursor: grabbing;
+}
