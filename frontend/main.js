@@ -1,3 +1,4 @@
+// main.js
 import { initAuth, api, createWebSocketConnection } from './src/utils/api.js';
 
 class QuantumTicTacToe {
@@ -9,7 +10,7 @@ class QuantumTicTacToe {
         this.game = null;
         this.selectedLayer = 1;
         this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
+        this.maxReconnectAttempts = 3;
         this.heartbeatInterval = null;
         this.init();
     }
@@ -38,6 +39,7 @@ class QuantumTicTacToe {
             window.startGame = () => this.startGame();
             window.selectLayer = (layer) => this.selectLayer(layer);
             window.makeMove = (x, y, z) => this.makeMove(x, y, z);
+            window.retryAuth = () => this.retryAuth();
             
         } catch (error) {
             console.error('Initialization error:', error);
@@ -48,8 +50,8 @@ class QuantumTicTacToe {
     showAuthScreen() {
         this.currentView = 'auth';
         const overlay = document.getElementById('ui-overlay');
-        overlay.innerHTML = `
-            <div class="center-container">
+        overlay.innerHTML = 
+            `<div class="center-container">
                 <div class="auth-container">
                     <h2>🎮 Quantum 3D Tic-Tac-Toe</h2>
                     <p>Authenticating with Telegram...</p>
@@ -57,8 +59,7 @@ class QuantumTicTacToe {
                         <div class="spinner"></div>
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
         
         document.getElementById('auth-screen').classList.add('active');
         document.getElementById('game-screen').classList.remove('active');
@@ -73,8 +74,32 @@ class QuantumTicTacToe {
             this.showMainMenu();
         } catch (error) {
             console.error('Auth error:', error);
-            this.showError('Authentication failed. Please restart the app.');
+            this.showAuthError('Authentication failed. Please try again.', error.message);
         }
+    }
+
+    showAuthError(message, detail = '') {
+        const overlay = document.getElementById('ui-overlay');
+        overlay.innerHTML = 
+            `<div class="center-container">
+                <div class="auth-container">
+                    <h2>🎮 Quantum 3D Tic-Tac-Toe</h2>
+                    <p style="color: #ff6b6b; margin-bottom: 20px;">${message}</p>
+                    ${detail ? `<p style="font-size: 0.9rem; opacity: 0.7; margin-bottom: 20px;">${detail}</p>` : ''}
+                    <button class="btn primary" onclick="retryAuth()">
+                        <span class="btn-icon">🔄</span>
+                        Try Again
+                    </button>
+                    <button class="btn secondary" style="margin-top: 10px;" onclick="window.location.reload()">
+                        <span class="btn-icon">↻</span>
+                        Reload App
+                    </button>
+                </div>
+            </div>`;
+    }
+
+    retryAuth() {
+        this.showAuthScreen();
     }
 
     disableZoom() {
@@ -95,8 +120,8 @@ class QuantumTicTacToe {
     showMainMenu() {
         this.currentView = 'main';
         const overlay = document.getElementById('ui-overlay');
-        overlay.innerHTML = `
-            <div class="center-container">
+        overlay.innerHTML = 
+            `<div class="center-container">
                 <div class="user-card">
                     <div class="user-avatar">👤</div>
                     <div class="user-info">
@@ -115,8 +140,7 @@ class QuantumTicTacToe {
                         Join by Code
                     </button>
                 </div>
-            </div>
-        `;
+            </div>`;
         
         document.getElementById('auth-screen').classList.remove('active');
         document.getElementById('game-screen').classList.add('active');
@@ -125,8 +149,8 @@ class QuantumTicTacToe {
     showCreateLobby() {
         this.currentView = 'create-lobby';
         const overlay = document.getElementById('ui-overlay');
-        overlay.innerHTML = `
-            <div class="center-container">
+        overlay.innerHTML = 
+            `<div class="center-container">
                 <div class="form-card">
                     <h2 class="form-title">Create Lobby</h2>
                     
@@ -146,15 +170,14 @@ class QuantumTicTacToe {
                         </button>
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     }
 
     showJoinLobby() {
         this.currentView = 'join-lobby';
         const overlay = document.getElementById('ui-overlay');
-        overlay.innerHTML = `
-            <div class="center-container">
+        overlay.innerHTML = 
+            `<div class="center-container">
                 <div class="form-card">
                     <h2 class="form-title">Join Lobby</h2>
                     
@@ -174,8 +197,7 @@ class QuantumTicTacToe {
                         </button>
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     }
 
     async confirmCreateLobby() {
@@ -230,21 +252,21 @@ class QuantumTicTacToe {
         const isHost = this.currentLobby.host === this.user.id;
         const overlay = document.getElementById('ui-overlay');
         
-        overlay.innerHTML = `
-            <div class="center-container">
+        overlay.innerHTML = 
+            `<div class="center-container">
                 <div class="lobby-card">
                     <h2 class="lobby-title">${this.currentLobby.name}</h2>
                     <div class="lobby-id">Code: ${this.currentLobby.id}</div>
                     
                     <div class="players-list">
                         <h3>Players (${this.currentLobby.players.length}/2)</h3>
-                        ${this.currentLobby.players.map(player => `
-                            <div class="player-item ${player.id === this.user.id ? 'current-player' : ''}">
+                        ${this.currentLobby.players.map(player => 
+                            `<div class="player-item ${player.id === this.user.id ? 'current-player' : ''}">
                                 <span class="player-avatar">${player.id === this.currentLobby.host ? '👑' : '👤'}</span>
                                 <span class="player-name">${player.first_name}</span>
                                 ${player.id === this.currentLobby.host ? '<span class="player-badge">Host</span>' : ''}
-                            </div>
-                        `).join('')}
+                            </div>`
+                        ).join('')}
                     </div>
 
                     <div class="lobby-status">
@@ -255,12 +277,12 @@ class QuantumTicTacToe {
                     </div>
 
                     <div class="lobby-actions">
-                        ${isHost && this.currentLobby.players.length === 2 ? `
-                            <button class="btn primary" onclick="startGame()">
+                        ${isHost && this.currentLobby.players.length === 2 ? 
+                            `<button class="btn primary" onclick="startGame()">
                                 <span class="btn-icon">🚀</span>
                                 Start Game
-                            </button>
-                        ` : ''}
+                            </button>`
+                         : ''}
 
                         <button class="btn danger" onclick="leaveLobby()">
                             <span class="btn-icon">🚪</span>
@@ -268,8 +290,7 @@ class QuantumTicTacToe {
                         </button>
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     }
 
     async startGame() {
@@ -291,8 +312,8 @@ class QuantumTicTacToe {
 
     init3DGame() {
         const overlay = document.getElementById('ui-overlay');
-        overlay.innerHTML = `
-            <div class="game-controls-top">
+        overlay.innerHTML = 
+            `<div class="game-controls-top">
                 <div class="layer-selector">
                     <label class="layer-radio">
                         <input type="radio" name="layer" value="1" ${this.selectedLayer === 1 ? 'checked' : ''} onchange="selectLayer(1)">
@@ -316,8 +337,7 @@ class QuantumTicTacToe {
                     <span class="btn-icon">←</span>
                     Leave Game
                 </button>
-            </div>
-        `;
+            </div>`;
 
         this.initThreeJS();
     }
@@ -541,29 +561,16 @@ class QuantumTicTacToe {
         if (overlay) overlay.innerHTML = '';
     }
 
-    setupWebSocket() {
+    async setupWebSocket() {
         if (!this.currentLobby) return;
         
         try {
-            this.socket = createWebSocketConnection();
-            
-            this.socket.onopen = () => {
-                console.log('WebSocket connection established');
-                this.reconnectAttempts = 0;
-                this.startHeartbeat();
-                
-                this.socket.send(JSON.stringify({
-                    type: 'join_lobby',
-                    lobbyId: this.currentLobby.id,
-                    userId: this.user.id,
-                    initData: Telegram.WebApp.initData
-                }));
-            };
+            this.socket = await createWebSocketConnection();
+            this.reconnectAttempts = 0;
             
             this.socket.onmessage = (event) => {
                 try {
                     const message = JSON.parse(event.data);
-                    console.log('WebSocket message received:', message.type);
                     this.handleWebSocketMessage(message);
                 } catch (error) {
                     console.error('WebSocket message parsing error:', error);
@@ -585,14 +592,34 @@ class QuantumTicTacToe {
                 if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
                     this.reconnectWebSocket();
                 } else if (this.currentLobby) {
+                    console.log('Max reconnection attempts reached');
                     this.showError('Connection lost. Returning to main menu.');
                     this.leaveLobby();
                 }
             };
+
+            // После подключения отправляем join_lobby
+            setTimeout(() => {
+                if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+                    this.socket.send(JSON.stringify({
+                        type: 'join_lobby',
+                        lobbyId: this.currentLobby.id,
+                        userId: this.user.id,
+                        initData: Telegram.WebApp.initData
+                    }));
+                }
+            }, 100);
+
+            // Запускаем heartbeat
+            this.startHeartbeat();
             
         } catch (error) {
             console.error('WebSocket setup error:', error);
-            this.showError('Failed to connect to game server');
+            if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                this.reconnectWebSocket();
+            } else {
+                this.showError('Failed to connect to game server');
+            }
         }
     }
 
@@ -614,15 +641,23 @@ class QuantumTicTacToe {
         
         this.heartbeatInterval = setInterval(() => {
             if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-                this.socket.send(JSON.stringify({ type: 'ping' }));
+                this.socket.send(JSON.stringify({ type: 'heartbeat' }));
             }
-        }, 30000);
+        }, 15000);
     }
 
     handleWebSocketMessage(message) {
         console.log('Processing message:', message.type);
         
         switch (message.type) {
+            case 'connected':
+                console.log('WebSocket connected successfully');
+                break;
+                
+            case 'lobby_joined':
+                console.log('Successfully joined lobby via WebSocket');
+                break;
+                
             case 'player_joined':
             case 'player_left':
                 this.currentLobby = message.lobby;
@@ -646,10 +681,12 @@ class QuantumTicTacToe {
                 break;
                 
             case 'error':
+                console.error('WebSocket error:', message.message);
                 this.showError(message.message || 'Server error');
                 break;
                 
-            case 'pong':
+            case 'heartbeat_ack':
+                // Подтверждение heartbeat
                 break;
                 
             default:
